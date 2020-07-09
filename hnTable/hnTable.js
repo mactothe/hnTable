@@ -373,11 +373,39 @@
                     hnTableCell.classList.add("hn-table-cell");
                     hnTableCell.setAttribute("hn-table-column", key);
                     if (obj[key]) {
-                        if (_config.columns[key] && _config.columns[key]["format"] && _config.columns[key]["format"] == "toLocaleString") {
+                        if (_config.columns[key] && _config.columns[key]["format"] && _config.columns[key]["format"] == "locale") {
                             hnTableCell.innerText = Number(obj[key]).toLocaleString();
+                        } else if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
+                            let r = _config.columns[key]["format"](obj[key], obj);
+                            if (r && typeof r != "function" && typeof r != "object") {
+                                hnTableCell.innerText = r;
+                            } else {
+                                hnTableCell.innerText = "";
+                            }
                         } else {
                             hnTableCell.innerText = obj[key];
                         }
+                    } else {
+                        if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
+                            let r = _config.columns[key]["format"](obj[key], obj);
+                            if (r && typeof r != "function" && typeof r != "object") {
+                                hnTableCell.innerText = r;
+                            } else {
+                                hnTableCell.innerText = "";
+                            }
+                        } else {
+                            hnTableCell.innerText = obj[key];
+                        }
+                    }
+                    if (_config.columns[key] && _config.columns[key]["cellEvent"] && _getObjType(_config.columns[key]["cellEvent"]) == "map") {
+                        Object.keys(_config.columns[key]["cellEvent"]).forEach(function (eKey) {
+                            hnTableCell.addEventListener(eKey, function (e) {
+                                let r = _config.columns[key]["cellEvent"][eKey](e, hnTableCell, obj[key], obj);
+                                if(typeof r == "boolean" ) {
+                                    return r;
+                                }
+                            });
+                        });
                     }
                     hnTableRow.insertAdjacentElement("beforeend", hnTableCell);
                 });
@@ -452,36 +480,22 @@
             _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
         });
 
-        /*if(_target.offsetWidth != _target.scrollWidth) {
-            console.log(_target.scrollWidth - _target.offsetWidth);
-            let calibrationTotal = (_target.scrollWidth - _target.offsetWidth);
-            let calibrationIndividual = (_target.scrollWidth - _target.offsetWidth)/columns.length;
-            Object.keys(columns).forEach(function (key, idx) {
-                if(idx != Object.keys(columns)-1) {
-                    calibrationTotal -= Math.floor(calibrationIndividual);
-                    _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width - calibrationIndividual + "px";
-                    _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width - calibrationIndividual + "px";
-                } else {
-                    _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width - Math.round(calibrationTotal) + "px";
-                    _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width - Math.round(calibrationTotal) + "px"
-                }
-            });
-            console.log(_target.scrollWidth - _target.offsetWidth);
-        }*/
+        let hScroll = _target.offsetHeight < (_target.querySelector(".hn-table-bd").offsetHeight + _target.querySelector(".hn-table-hd").offsetHeight);
 
-        _target.querySelectorAll("tr > td:last-child").forEach(function (el) {
-            let correctionSize = 19;
-            if (Number(el.style.width.replace("px", "")) != el.offsetWidth) {
-                correctionSize += el.offsetWidth - Number(el.style.width.replace("px", ""))
-            }
-            el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) - correctionSize + "px";
-        });
+        let correctionVal = -17;
         _target.querySelectorAll("tr > th:last-child").forEach(function (el) {
-            let correctionSize = 19;
-            if (Number(el.style.width.replace("px", "")) != el.offsetWidth) {
-                correctionSize += el.offsetWidth - Number(el.style.width.replace("px", ""))
+            let correctionSize = _target.querySelector(".hn-table-cover").offsetWidth - _target.querySelector(".hn-table-hd").offsetWidth;
+            if (hScroll) {
+                correctionSize += correctionVal;
             }
-            el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) - correctionSize + "px";
+            el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
+        });
+        _target.querySelectorAll("tr > td:last-child").forEach(function (el) {
+            let correctionSize = _target.querySelector(".hn-table-cover").offsetWidth - _target.querySelector(".hn-table-bd").offsetWidth;
+            if (hScroll) {
+                correctionSize += correctionVal;
+            }
+            el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
         });
 
 
@@ -680,6 +694,17 @@
                 callback.call(thisArg, this[i], i, this);
             }
         };
+    }
+
+    let _getObjType = function () {
+        let arg = arguments[0];
+        if (typeof arg != "object") {
+            return typeof arg;
+        }
+        if (arg instanceof Array) {
+            return "array";
+        }
+        return "map";
     }
 
     return hnTable;

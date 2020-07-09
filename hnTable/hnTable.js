@@ -1,0 +1,686 @@
+(function (root, constructor) {
+    const plugin = 'HnTable';
+    root[plugin] = constructor();
+})(typeof global !== 'undefined' ? global : this.window || this.global, function () {
+    "use strict";
+
+    let errorMsg = {
+        ko: {
+            "0001": "열에 대한 객체 타입이 올바르지 않습니다.(올바른 열의 타입은 [] 입니다.)",
+            "0002": "열을 생성하지 못했습니다.",
+            "0003": "열의 이름 또는 번호를 입력해주세요.",
+            "0004": "파라미터에 대한 객체 타입이 올바르지 않습니다.(올바른 파라미터의 타입은 'string' 또는 'number' 입니다.)",
+            "0005": "입력한 인덱스에 해당하는 행을 찾을 수 없습니다.",
+            "0006": "입력한 파라미터에 해당하는 열을 찾을 수 없습니다.",
+            "0007": "설정의 'target'에 대한 Element를 찾을 수 없습니다.",
+            "0008": "설정의 'target' 타입이 올바르지 않습니다.",
+        },
+        eng: {
+            "0001": "Mismatching 'columns' Object type.(The columns is of type [])",
+            "0002": "Columns cannot be created.",
+            "0003": "Please enter a name or number for the column",
+            "0004": "Mismatching parameter Object type.(The parameter is of type 'string' or 'number')",
+            "0005": "The row corresponding to the index you entered cannot be found.",
+            "0006": "The column corresponding to the parameter you entered cannot be found.",
+            "0007": "Element not found for 'target' in settings.",
+            "0008": "The 'target' type of settings is not correct."
+        }
+    };
+
+    let _instance = [];
+    let _instanceNumber = 0;
+
+    let _defaultConfig = {
+        target: "",
+        numberColumn: false,
+        /**
+         * example-
+         * columns: {
+         *     test: {
+         *         markText: "TEST",        [Optional]
+         *         type: "string",          [Optional]
+         *         sortAble: true           [Optional]
+         *         edit: true               [Optional]
+         *         width: "10%"             [Optional]
+         *         cellEvent: ()  {},     [Optional]
+         *         headEvent: ()  {},     [Optional]
+         *     }
+         * }
+         */
+        columns: {},
+        colHeadFixed: true,
+        resizeable: true,
+        /**
+         * data: [{
+         *      key: value
+         * }]
+         */
+        data: [],
+        lang: "ko",
+        paging: false,
+        string: {
+            ko: {
+                empty: "내용이 존재하지 않습니다."
+            },
+            eng: {
+                empty: "The content does not exist."
+            }
+        }
+    }
+
+    let _config = {};
+
+    let _target = _config.target;
+
+    let _bindEvent = {
+        'click': '',
+        'dbclick': '',
+        'change': ''
+    }
+
+    let hnTable = function (config) {
+        _config = {};
+        _config = _extend(true, _defaultConfig, _config);
+        _config = _extend(true, _config, config);
+
+        _target = _config.target;
+
+        if (typeof _target === "string") {
+            _config.target = document.querySelector(_target);
+        } else if ((jQuery && _target instanceof jQuery.fn.init) || ($ && _target instanceof ($.fn || $.fn.init))) {
+            _config.target = _target[0];
+        }
+
+        _target = _config.target;
+
+        if (!_target) {
+            throw new Error(_getErrorMsg("0007"));
+        } else if (_target instanceof Element) {
+            if (_target.nodeName != "DIV") {
+                throw new Error(_getErrorMsg("0008"));
+            }
+        }
+        _config.name = _config.name ? _config.name : "hnTable_" + _instanceNumber;
+
+        this.config = _config;
+        this.getColumnData = _getColumnData;
+        this.getColumnIndex = _getColumnIndex;
+        this.getRowData = _getRowData;
+        this.getCellData = _getCellData;
+        this.initTable = _initTable;
+
+        let instance = {
+            instance: this,
+            instanceNumber: _instanceNumber++,
+            instanceName: this.config.name
+        }
+
+        _addInstance(instance);
+        _initTable(this.config.columns, this.config.data);
+
+        return this;
+    };
+
+    hnTable.getInstance = function (callInstance) {
+        return _getInstance(callInstance);
+    }
+
+    hnTable.setModal = function (option) {
+        let _option = {
+            title: "untitle",
+            content: "uncontent",
+            contentType: "text",
+            width: 300,
+            height: 150,
+            buttons: {
+                confirm: {
+                    event: function () {
+                        console.log("confirm Click");
+                    },
+                    name: "확인"
+                }
+            },
+            verticalAlign: "center"
+        }
+        if (option) {
+            _option = _extend(true, _option, option);
+        }
+        if (document.querySelector(".hn-table-modal-overlay")) {
+            document.querySelector(".hn-table-modal-overlay").remove();
+        }
+        let hnTableModalOverlay = document.createElement("div");
+        hnTableModalOverlay.classList.add("hn-table-modal-overlay");
+        hnTableModalOverlay.setAttribute("oncontextmenu", "return false;");
+
+        let hnTableModal = document.createElement("div");
+        hnTableModal.classList.add("hn-table-modal");
+
+
+        if (_option.width) {
+            hnTableModal.style.width = _option.width + "px";
+            hnTableModal.style.left = "calc(50% - " + (_option.width / 2) + "px)";
+        }
+        if (_option.height) {
+            hnTableModal.style.height = _option.height + "px";
+            hnTableModal.style.top = "calc(50% - " + (_option.height / 2) + "px)";
+        }
+
+        hnTableModalOverlay.insertAdjacentElement("beforeend", hnTableModal);
+
+        let hnTableModalTitle = document.createElement("div");
+        hnTableModalTitle.classList.add("hn-table-modal-title");
+
+        hnTableModal.insertAdjacentElement("beforeend", hnTableModalTitle);
+
+        let hnTableModalTitleText = document.createElement("div");
+        hnTableModalTitleText.classList.add("hn-table-modal-title-text");
+        if (_option.title) {
+            hnTableModalTitleText.innerText = _option.title;
+        }
+        hnTableModalTitle.insertAdjacentElement("beforeend", hnTableModalTitleText);
+
+        let hnTableModalTitleClose = document.createElement("div");
+        hnTableModalTitleClose.classList.add("hn-table-modal-title-close");
+        hnTableModalTitleClose.innerText = "X";
+        hnTableModalTitleClose.addEventListener("click", function () {
+            hnTableModalOverlay.remove();
+        });
+
+        hnTableModalTitle.insertAdjacentElement("beforeend", hnTableModalTitleClose);
+
+        let hnTableModalContentWrap = document.createElement("div");
+        hnTableModalContentWrap.classList.add("hn-table-modal-content-wrap");
+
+        hnTableModal.insertAdjacentElement("beforeend", hnTableModalContentWrap);
+
+        let hnTableModalContentTable = document.createElement("div");
+        hnTableModalContentTable.classList.add("hn-table-modal-content-table");
+
+        hnTableModalContentWrap.insertAdjacentElement("beforeend", hnTableModalContentTable);
+
+        let hnTableModalContent = document.createElement("div");
+        hnTableModalContent.classList.add("hn-table-modal-content");
+        hnTableModalContent.style.verticalAlign = _option.verticalAlign;
+
+        hnTableModalContentTable.insertAdjacentElement("beforeend", hnTableModalContent);
+
+        if (_option.content) {
+            if (_option.contentType == "text") {
+                hnTableModalContent.insertAdjacentText("beforeend", _option.content);
+            } else {
+                hnTableModalContent.insertAdjacentHTML("beforeend", _option.content);
+            }
+        }
+
+        let hnTableModalButtons = document.createElement("div");
+        hnTableModalButtons.classList.add("hn-table-modal-buttons");
+
+        hnTableModal.insertAdjacentElement("beforeend", hnTableModalButtons);
+
+        if (_option.buttons) {
+            if (_option.buttons.confirm) {
+                let confirmButton = document.createElement("input");
+                confirmButton.type = "button";
+                confirmButton.classList.add("hn-table-modal-button", "confirm");
+                if (_option.buttons.confirm.name) {
+                    confirmButton.value = _option.buttons.confirm.name;
+                } else {
+                    confirmButton.value = "확인";
+                }
+                if (_option.buttons.confirm.event) {
+                    confirmButton.addEventListener("click", _option.buttons.confirm.event);
+                }
+                hnTableModalButtons.insertAdjacentElement("beforeend", confirmButton);
+            }
+            if (_option.buttons.cancel) {
+                let cancelButton = document.createElement("input");
+                cancelButton.type = "button";
+                cancelButton.classList.add("hn-table-modal-button", "cancel");
+                if (_option.buttons.cancel.name) {
+                    cancelButton.value = _option.buttons.cancel.name;
+                } else {
+                    cancelButton.value = "취소";
+                }
+                if (_option.buttons.cancel.event) {
+                    cancelButton.addEventListener("click", _option.buttons.cancel.event);
+                }
+                hnTableModalButtons.insertAdjacentElement("beforeend", cancelButton);
+            }
+        }
+        document.querySelector("body").insertAdjacentElement("beforeend", hnTableModalOverlay);
+    }
+
+    let _getInstance = function () {
+        var _arguments = arguments;
+        if (typeof (_arguments && _arguments[0]) == "string") {
+            if (_instance.filter(function (instance) {
+                return instance.instanceName === _arguments[0];
+            })[0]) {
+                return _instance.filter(function (instance) {
+                    return instance.instanceName === _arguments[0];
+                })[0].instance;
+            }
+            return _instance.filter(function (instance) {
+                return instance.instanceName === _arguments[0];
+            })[0];
+        }
+        if (typeof (_arguments && _arguments[0]) == "number") {
+            if (_instance.filter(function (instance) {
+                return instance.instanceNumber === _arguments[0];
+            })[0]) {
+                return _instance.filter(function (instance) {
+                    return instance.instanceNumber === _arguments[0];
+                })[0].instance;
+            }
+            return _instance.filter(function (instance) {
+                return instance.instanceNumber === _arguments[0];
+            })[0];
+        }
+        let instanceList = [];
+        _instance.forEach(function (instance) {
+            instanceList.push(instance.instance)
+        });
+        return instanceList;
+    };
+
+    let _addInstance = function (instance) {
+        _instance.push(instance);
+    };
+
+    let _initTable = function (columns, data) {
+        if (this) {
+            _config = this.config;
+            _target = this.config.target;
+            _target.querySelector(".hn-table-cover").remove();
+            columns = _config.columns;
+            data = _config.data;
+        }
+
+        if (typeof columns == "object" && columns instanceof Array) {
+            throw new Error(_getErrorMsg("0001"));
+        }
+
+        if (typeof data == "object" && !(data instanceof Array)) {
+            throw new Error(_getErrorMsg("0001"));
+        }
+
+        if (!_target.classList.contains(".hn-table-wrap")) {
+            _target.classList.add("hn-table-wrap");
+        } else {
+            _target.childNodes.forEach(function (el) {
+                el.remove();
+            });
+        }
+        _target.setAttribute("hn-table-name", _config.name);
+
+        let hnTableCover = document.createElement("div");
+        hnTableCover.classList.add("hn-table-cover");
+
+        let hnTableTbHd = document.createElement("table");
+        hnTableTbHd.classList.add("hn-table-hd");
+
+        let hnTableHeader = document.createElement("thead");
+        hnTableHeader.classList.add("hn-table-header");
+
+        let hnTableHeaderRow = document.createElement("tr");
+        hnTableHeaderRow.classList.add("hn-table-row");
+        hnTableHeader.insertAdjacentElement("beforeend", hnTableHeaderRow);
+
+        if (Object.keys(columns).length > 0) {
+            Object.keys(columns).forEach(function (key) {
+                let markText = key;
+                if (columns[key].markText) {
+                    markText = columns[key].markText;
+                }
+                let hnTableHead = document.createElement("th");
+                hnTableHead.classList.add("hn-table-head");
+                hnTableHead.setAttribute("hn-table-column-key", key);
+                hnTableHead.innerText = markText;
+                hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
+            });
+        } else {
+            if (data.length > 0) {
+                columns = {};
+                Object.keys(data[0]).forEach(function (key) {
+                    columns[key] = {};
+                    let markText = key;
+                    let hnTableHead = document.createElement("th");
+                    hnTableHead.classList.add("hn-table-head");
+                    hnTableHead.setAttribute("hn-table-column-key", key);
+                    hnTableHead.innerText = markText;
+                    hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
+                });
+            } else {
+                throw new Error(_getErrorMsg("0002"));
+            }
+            _config.columns = columns;
+        }
+        hnTableTbHd.insertAdjacentElement("beforeend", hnTableHeader);
+
+
+        let hnTableTbBd = document.createElement("table");
+        hnTableTbBd.classList.add("hn-table-bd");
+        if (data.length > 0) {
+            let hnTableBody = document.createElement("tbody");
+            hnTableBody.classList.add("hn-table-body");
+            data.forEach(function (obj, idx) {
+                let hnTableRow = document.createElement("tr");
+                hnTableRow.classList.add("hn-table-row");
+                hnTableRow.setAttribute("hn-table-row-num", idx);
+
+                Object.keys(columns).forEach(function (key) {
+                    let hnTableCell = document.createElement("td");
+                    hnTableCell.classList.add("hn-table-cell");
+                    hnTableCell.setAttribute("hn-table-column", key);
+                    if (obj[key]) {
+                        if (_config.columns[key] && _config.columns[key]["format"] && _config.columns[key]["format"] == "toLocaleString") {
+                            hnTableCell.innerText = Number(obj[key]).toLocaleString();
+                        } else {
+                            hnTableCell.innerText = obj[key];
+                        }
+                    }
+                    hnTableRow.insertAdjacentElement("beforeend", hnTableCell);
+                });
+                hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
+            });
+            hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+        } else {
+            let hnTableEmpty = document.createElement("div");
+            hnTableEmpty.classList.add("hn-table-empty");
+            hnTableEmpty.innerText = _config.string[_config.lang].empty;
+            hnTableCover.insertAdjacentElement("beforeend", hnTableEmpty);
+        }
+        hnTableCover.insertAdjacentElement("beforeend", hnTableTbHd);
+        hnTableCover.insertAdjacentElement("beforeend", hnTableTbBd);
+
+        _target.insertAdjacentElement("beforeend", hnTableCover);
+
+        _setColumnWidth(_target);
+
+        if (!_config.colHeadFixed) {
+            hnTableTbHd.style.position = "inherit";
+        }
+        if (_config.resizeable) {
+            _resizeable(hnTableTbHd, hnTableTbBd);
+        }
+    }
+
+    let _setColumnWidth = function (_target) {
+        let targetWidth = _target.offsetWidth;
+        let columns = _config.columns;
+        let existWidthColumns = Object.keys(columns).filter(function (key) {
+            return columns[key].width;
+        });
+
+        existWidthColumns.forEach(function (key) {
+            if (!isNaN(columns[key].width)) {
+                targetWidth -= columns[key].width;
+            } else if (columns[key].width.indexOf("%")) {
+                columns[key].width = Math.floor(_target.offsetWidth * Number(columns[key].width.replace("%", "").trim()) / 100);
+                targetWidth -= columns[key].width;
+            } else if (columns[key].width.indexOf("px")) {
+                columns[key].width = Number(columns[key].width.replace("px", "").trim()) / 100;
+                targetWidth -= columns[key].width;
+            } else {
+                delete columns[key].width;
+            }
+        });
+
+        existWidthColumns = Object.keys(columns).filter(function (key) {
+            return columns[key].width;
+        });
+
+        let defaultColumnsWidth = Math.floor(targetWidth / (Object.keys(columns).length - existWidthColumns.length));
+
+        let notExistWidthColumns = Object.keys(columns).filter(function (key) {
+            return !columns[key].width;
+        });
+
+        existWidthColumns.forEach(function (key) {
+            _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width + "px";
+            _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+        });
+
+        notExistWidthColumns.forEach(function (key, idx) {
+            if (notExistWidthColumns.length - 1 == idx) {
+                columns[key].width = targetWidth;
+            } else {
+                columns[key].width = defaultColumnsWidth;
+                targetWidth -= defaultColumnsWidth;
+            }
+            _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width + "px";
+            _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+        });
+
+        /*if(_target.offsetWidth != _target.scrollWidth) {
+            console.log(_target.scrollWidth - _target.offsetWidth);
+            let calibrationTotal = (_target.scrollWidth - _target.offsetWidth);
+            let calibrationIndividual = (_target.scrollWidth - _target.offsetWidth)/columns.length;
+            Object.keys(columns).forEach(function (key, idx) {
+                if(idx != Object.keys(columns)-1) {
+                    calibrationTotal -= Math.floor(calibrationIndividual);
+                    _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width - calibrationIndividual + "px";
+                    _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width - calibrationIndividual + "px";
+                } else {
+                    _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width - Math.round(calibrationTotal) + "px";
+                    _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width - Math.round(calibrationTotal) + "px"
+                }
+            });
+            console.log(_target.scrollWidth - _target.offsetWidth);
+        }*/
+
+        _target.querySelectorAll("tr > td:last-child").forEach(function (el) {
+            let correctionSize = 19;
+            if (Number(el.style.width.replace("px", "")) != el.offsetWidth) {
+                correctionSize += el.offsetWidth - Number(el.style.width.replace("px", ""))
+            }
+            el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) - correctionSize + "px";
+        });
+        _target.querySelectorAll("tr > th:last-child").forEach(function (el) {
+            let correctionSize = 19;
+            if (Number(el.style.width.replace("px", "")) != el.offsetWidth) {
+                correctionSize += el.offsetWidth - Number(el.style.width.replace("px", ""))
+            }
+            el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) - correctionSize + "px";
+        });
+
+
+    }
+
+    let _getColumnData = function () {
+        let _arguments = arguments;
+        if (_arguments && _arguments[0] != null) {
+            if (typeof _arguments[0] == "string" || typeof _arguments[0] == "number") {
+                let column = _arguments[0];
+                if (typeof column == "number") {
+                    column = Object.keys(this.config.columns)[column];
+                } else {
+                    column = this.config.columns[column] ? column : null;
+                }
+                if (column) {
+                    let columnData = [];
+                    this.config.data.forEach(function (datam) {
+                        columnData.push(datam[column]);
+                    });
+                    return columnData;
+                } else {
+                    throw new Error(_getErrorMsg("0006"));
+                }
+            } else {
+                throw new Error(_getErrorMsg("0004"));
+            }
+        } else {
+            throw new Error(_getErrorMsg("0003"));
+        }
+    }
+
+    let _getColumnIndex = function () {
+        let _arguments = arguments;
+        if (_arguments && _arguments[0] != null) {
+            if (typeof _arguments[0] == "string" || typeof _arguments[0] == "number") {
+                let columnIndex = _arguments[0];
+                columnIndex = Object.keys(this.config.columns).indexOf(columnIndex);
+                return columnIndex;
+            } else {
+                throw new Error(_getErrorMsg("0003"));
+            }
+        }
+    }
+
+    let _getRowData = function (idx) {
+        if (idx != null) {
+            if (typeof idx == "string" || typeof idx == "number") {
+                if (this.config.data[idx]) {
+                    return this.config.data[idx];
+                } else {
+                    throw new Error(_getErrorMsg("0004"));
+                }
+            } else {
+                throw new Error(_getErrorMsg("0004"));
+            }
+        } else {
+            throw new Error(_getErrorMsg("0005"));
+        }
+    }
+
+    let _getCellData = function () {
+        let _arguments = arguments;
+        if (_arguments && _arguments[0] == null) {
+            throw new Error(_getErrorMsg("0003"));
+        }
+        if (_arguments && _arguments[1] == null) {
+            throw new Error(_getErrorMsg("0005"));
+        }
+        let columnData = this.getColumnData(arguments[0]);
+        if (typeof _arguments[1] == "string" || typeof _arguments[1] == "number") {
+            if (columnData[_arguments[1]]) {
+                return columnData[_arguments[1]];
+            } else {
+                throw new Error(_getErrorMsg("0004"));
+            }
+        } else {
+            throw new Error(_getErrorMsg("0004"));
+        }
+    }
+
+    let _getErrorMsg = function (callErr) {
+        return callErr + ": " + errorMsg[_config.lang][callErr];
+    }
+
+    let _makeTableHeader = function (hnTable) {
+
+    }
+
+    let _resizeable = function (thead, tbody) {
+        let theadTr = thead.getElementsByTagName("tr")[0];
+        let th = theadTr ? theadTr.children : void 0;
+        let tbodyTr = tbody.getElementsByTagName("tr")[0];
+        if (th) {
+            for (let i = 0; i < th.length; i++) {
+                let resizeLine = makeResizeLine(100);
+                th[i].appendChild(resizeLine);
+                th[i].style.position = 'relative';
+                resizeControll(resizeLine);
+            }
+        }
+
+        function resizeControll(resizeLine) {
+            //let t, n, i, o, r
+            let resizeLinePosX, prevColumn, nextColumn, pcSize, ncSize;
+            let prevTd, nextTd;
+            resizeLine.addEventListener("mousedown", function (e) {
+                prevColumn = e.target.parentElement;
+                nextColumn = prevColumn.nextElementSibling;
+                resizeLinePosX = e.pageX;
+
+                let columnKey = prevColumn.getAttribute("hn-table-column-key");
+                prevTd = tbodyTr.querySelector("[hn-table-column='" + columnKey + "']");
+                nextTd = prevTd.nextElementSibling;
+
+                let d = function (e) {
+                    if ("border-box" == l(e, "box-sizing")) {
+                        return 0;
+                    }
+                    let t = l(e, "padding-left"),
+                        n = l(e, "padding-right");
+                    return parseInt(t) + parseInt(n);
+                }(prevColumn);
+                pcSize = prevColumn.offsetWidth - d, nextColumn && (ncSize = nextColumn.offsetWidth - d);
+            });
+            resizeLine.addEventListener("mouseover", function (e) {
+                e.target.style.borderRight = "2px solid #0000ff";
+            });
+            resizeLine.addEventListener("mouseout", function (e) {
+                e.target.style.borderRight = "";
+            });
+            document.addEventListener("mousemove", function (e) {
+                if (prevColumn) {
+                    let d = e.pageX - resizeLinePosX;
+                    nextColumn && (nextColumn.style.width = ncSize - d + "px");
+                    prevColumn.style.width = pcSize + d + "px";
+                    nextTd && (nextTd.style.width = ncSize - d + "px");
+                    prevTd.style.width = pcSize + d + "px";
+                }
+            });
+            document.addEventListener("mouseup", function () {
+                resizeLinePosX = void 0, prevColumn = void 0, nextColumn = void 0, pcSize = void 0, ncSize = void 0
+            });
+        }
+
+        function makeResizeLine(e) {
+            var resizeLine = document.createElement("div");
+            resizeLine.style.top = 0;
+            resizeLine.style.right = 0;
+            resizeLine.style.width = "5px";
+            resizeLine.style.position = 'absolute';
+            resizeLine.style.cursor = "col-resize";
+            resizeLine.style.userSelect = "none";
+            resizeLine.style.height = e + "%";
+            return resizeLine;
+        }
+
+        function l(e, t) {
+            return window.getComputedStyle(e, null).getPropertyValue(t);
+        }
+    }
+
+    let _extend = function () {
+        let extended = {};
+        let deep = false;
+        let i = 0;
+        if (Object.prototype.toString.call(arguments[0]) === '[object Boolean]') {
+            deep == arguments[0];
+            i++;
+        }
+        let merge = function (obj) {
+            for (let prop in obj) {
+                if (obj.hasOwnProperty(prop)) {
+                    if (deep && Object.prototype.toString.call(obj[prop]) === '[object Object]') {
+                        extended[prop] = extend(extended[prop], obj[prop]);
+                    } else {
+                        extended[prop] = obj[prop];
+                    }
+                }
+            }
+        }
+        for (; i < arguments.length; i++) {
+            merge(arguments[i]);
+        }
+        return extended;
+    }
+
+
+    /**
+     * NodeList.forEach not Exists
+     */
+    if (window.NodeList && !NodeList.prototype.forEach) {
+        NodeList.prototype.forEach = function (callback, thisArg) {
+            thisArg = thisArg || window;
+            for (var i = 0; i < this.length; i++) {
+                callback.call(thisArg, this[i], i, this);
+            }
+        };
+    }
+
+    return hnTable;
+});

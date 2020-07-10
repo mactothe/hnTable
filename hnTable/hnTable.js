@@ -57,7 +57,9 @@
          */
         data: [],
         lang: "ko",
-        paging: false,
+        paging: {
+
+        },
         string: {
             ko: {
                 empty: "내용이 존재하지 않습니다."
@@ -250,6 +252,58 @@
         document.querySelector("body").insertAdjacentElement("beforeend", hnTableModalOverlay);
     }
 
+    hnTable.showLoading = function (el) {
+
+
+
+        let overlayEl = document.createElement("div");
+        overlayEl.setAttribute("class", "hn-table-loading-overlay");
+        overlayEl.style.position = "fixed";
+        overlayEl.style.width = "100%";
+        overlayEl.style.height = "100%";
+        overlayEl.style.top = "0px";
+        overlayEl.style.left = "0px";
+        overlayEl.style.zIndex = "9999";
+        overlayEl.style.background = "rgba(0, 0, 0, 0.5)";
+
+        let loadingHtml =
+            "   <div style='position: inherit;width: 174px;height: 80px;line-height: 33px;font-family: Arial, Helvetica, sans-serif;font-size: 12pt;font-weight: 900;color: #000000;top: calc(50% - 80px);left: calc(50% - 87px);pointer-events: none;'>" +
+            "      <div style='display: inline-block;position: absolute;left: 8px;width: 16px;animation: jumpText 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;left: 8px;animation-delay: -0.72s;'>L</div>" +
+            "      <div style='display: inline-block;position: absolute;left: 8px;width: 16px;animation: jumpText 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;left: 32px;animation-delay: -0.60s;'>O</div>" +
+            "      <div style='display: inline-block;position: absolute;left: 8px;width: 16px;animation: jumpText 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;left: 56px;animation-delay: -0.48s;'>A</div>" +
+            "      <div style='display: inline-block;position: absolute;left: 8px;width: 16px;animation: jumpText 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;left: 80px;animation-delay: -0.36s;'>D</div>" +
+            "      <div style='display: inline-block;position: absolute;left: 8px;width: 16px;animation: jumpText 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;left: 104px;animation-delay: -0.24s;'>I</div>" +
+            "      <div style='display: inline-block;position: absolute;left: 8px;width: 16px;animation: jumpText 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;left: 128px;animation-delay: -0.12s;'>N</div>" +
+            "      <div style='display: inline-block;position: absolute;left: 8px;width: 16px;animation: jumpText 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;left: 152px;animation-delay: 0s;'>G</div>" +
+            "   </div>";
+
+        if(!el) {
+            document.querySelectorAll("body > .hn-table-loading-overlay").forEach(function (el) {
+                el.remove();
+            });
+            overlayEl.insertAdjacentHTML("beforeend", loadingHtml);
+            document.querySelector("body").insertAdjacentElement("beforeend", overlayEl);
+        } else {
+            if(typeof el == "string"){
+                document.querySelector(el).querySelector(".hn-table-loading-overlay").forEach(function (el) {
+                    el.remove();
+                });
+                document.querySelector(el).insertAdjacentHTML("beforeend", loadingHtml);
+            } else {
+                el.querySelectorAll("body > .hn-table-loading-overlay").forEach(function (el) {
+                    el.remove();
+                });
+                el.insertAdjacentHTML("beforeend", loadingHtml);
+            }
+        }
+    };
+
+    hnTable.hideLoading = function () {
+        document.querySelectorAll("body > .hn-table-loading-overlay").forEach(function (el) {
+            el.remove();
+        });
+    };
+
     let _getInstance = function () {
         var _arguments = arguments;
         if (typeof (_arguments && _arguments[0]) == "string") {
@@ -291,9 +345,15 @@
         if (this) {
             _config = this.config;
             _target = this.config.target;
-            _target.querySelector(".hn-table-cover").remove();
             columns = _config.columns;
             data = _config.data;
+            _target.removeAttribute("hn-table-paging");
+            if(_target.querySelector(".hn-table-cover")) {
+                _target.querySelector(".hn-table-cover").remove();
+            }
+            if(_target.querySelector(".hn-table-paging")) {
+                _target.querySelector(".hn-table-paging").remove();
+            }
         }
 
         if (typeof columns == "object" && columns instanceof Array) {
@@ -312,6 +372,13 @@
             });
         }
         _target.setAttribute("hn-table-name", _config.name);
+
+        if(typeof _config.paging != "boolean") {
+            _target.setAttribute("hn-table-paging", true);
+        }
+
+        let hnTablePaging = document.createElement("div");
+        hnTablePaging.classList.add("hn-table-paging");
 
         let hnTableCover = document.createElement("div");
         hnTableCover.classList.add("hn-table-cover");
@@ -401,7 +468,7 @@
                         Object.keys(_config.columns[key]["cellEvent"]).forEach(function (eKey) {
                             hnTableCell.addEventListener(eKey, function (e) {
                                 let r = _config.columns[key]["cellEvent"][eKey](e, hnTableCell, obj[key], obj);
-                                if(typeof r == "boolean" ) {
+                                if (typeof r == "boolean") {
                                     return r;
                                 }
                             });
@@ -422,6 +489,7 @@
         hnTableCover.insertAdjacentElement("beforeend", hnTableTbBd);
 
         _target.insertAdjacentElement("beforeend", hnTableCover);
+        _target.insertAdjacentElement("beforeend", hnTablePaging);
 
         _setColumnWidth(_target);
 
@@ -581,7 +649,68 @@
         return callErr + ": " + errorMsg[_config.lang][callErr];
     }
 
-    let _makeTableHeader = function (hnTable) {
+    let _getObjType = function () {
+        let arg = arguments[0];
+        if (typeof arg != "object") {
+            return typeof arg;
+        }
+        if (arg instanceof Array) {
+            return "array";
+        }
+        return "map";
+    }
+
+    let _rest = function (option) {
+        let method = (option.method ? option.method : "GET").toUpperCase();
+        let url = option.url;
+        let type = (option.type ? (option.type.toLowerCase() == "json" ? "text" : option.type) : "text").toLowerCase();
+        let progress = typeof option.progress == "boolean" ? option.progress : true;
+        return new Promise(function (resolve, reject) {
+            const xhr = new XMLHttpRequest();
+            if (option.requestHeader && _getObjType(option.requestHeader) == "map") {
+                Object(option.requestHeader).keys().forEach(function (key) {
+                    xhr.setRequestHeader(key, option.requestHeader[key]);
+                })
+            }
+            xhr.open(method, url);
+            xhr.onload = function () {
+                if (xhr.status == 200) {
+                    let response = xhr.response;
+                    if (option.type && option.type.toLowerCase() == "json") {
+                        resolve(JSON.parse(response));
+                    } else {
+                        resolve(response);
+                    }
+                }
+            };
+
+            xhr.onerror = function () {
+                reject("Network Error");
+            }
+
+            if (method == "POST" && option.data) {
+                xhr.responseType = type;
+                let params = "";
+                if (option.data instanceof Object) {
+                    Object.keys(option.data).forEach(function (key, idx) {
+                        if (idx != Object.keys(option.data).length) {
+                            params += (key + "=" + option.data[key] + "&");
+                        } else {
+                            params += (key + "=" + option.data[key]);
+                        }
+                    });
+                }
+                xhr.send(params);
+            } else {
+                xhr.send();
+            }
+
+        }).finally(function () {
+
+        });
+    }
+
+    let _setPaging = function () {
 
     }
 
@@ -694,17 +823,6 @@
                 callback.call(thisArg, this[i], i, this);
             }
         };
-    }
-
-    let _getObjType = function () {
-        let arg = arguments[0];
-        if (typeof arg != "object") {
-            return typeof arg;
-        }
-        if (arg instanceof Array) {
-            return "array";
-        }
-        return "map";
     }
 
     return hnTable;

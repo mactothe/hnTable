@@ -127,7 +127,7 @@
         return _getInstance(callInstance);
     }
 
-    hnTable.setModal = function (option) {
+    hnTable.modal = function (option) {
         let _option = {
             title: "untitle",
             content: "uncontent",
@@ -253,9 +253,6 @@
     }
 
     hnTable.showLoading = function (el) {
-
-
-
         let overlayEl = document.createElement("div");
         overlayEl.setAttribute("class", "hn-table-loading-overlay");
         overlayEl.style.position = "fixed";
@@ -565,8 +562,6 @@
             }
             el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
         });
-
-
     }
 
     let _getColumnData = function () {

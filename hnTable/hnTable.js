@@ -57,9 +57,12 @@
          */
         data: [],
         lang: "ko",
-        paging: {
-
-        },
+        /*pageOption: {
+            type: "client",
+            perPage: "10",
+            scrolling: false
+        },*/
+        pageOption: false,
         string: {
             ko: {
                 empty: "내용이 존재하지 않습니다."
@@ -110,6 +113,7 @@
         this.getRowData = _getRowData;
         this.getCellData = _getCellData;
         this.initTable = _initTable;
+        this.setPage = _setPage;
 
         let instance = {
             instance: this,
@@ -274,14 +278,14 @@
             "      <div style='display: inline-block;position: absolute;left: 8px;width: 16px;animation: jumpText 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;left: 152px;animation-delay: 0s;'>G</div>" +
             "   </div>";
 
-        if(!el) {
+        if (!el) {
             document.querySelectorAll("body > .hn-table-loading-overlay").forEach(function (el) {
                 el.remove();
             });
             overlayEl.insertAdjacentHTML("beforeend", loadingHtml);
             document.querySelector("body").insertAdjacentElement("beforeend", overlayEl);
         } else {
-            if(typeof el == "string"){
+            if (typeof el == "string") {
                 document.querySelector(el).querySelector(".hn-table-loading-overlay").forEach(function (el) {
                     el.remove();
                 });
@@ -344,12 +348,12 @@
             _target = this.config.target;
             columns = _config.columns;
             data = _config.data;
-            _target.removeAttribute("hn-table-paging");
-            if(_target.querySelector(".hn-table-cover")) {
+            _target.removeAttribute("hn-table-pagination");
+            if (_target.querySelector(".hn-table-cover")) {
                 _target.querySelector(".hn-table-cover").remove();
             }
-            if(_target.querySelector(".hn-table-paging")) {
-                _target.querySelector(".hn-table-paging").remove();
+            if (_target.querySelector(".hn-table-pagination")) {
+                _target.querySelector(".hn-table-pagination").remove();
             }
         }
 
@@ -369,13 +373,6 @@
             });
         }
         _target.setAttribute("hn-table-name", _config.name);
-
-        if(typeof _config.paging != "boolean") {
-            _target.setAttribute("hn-table-paging", true);
-        }
-
-        let hnTablePaging = document.createElement("div");
-        hnTablePaging.classList.add("hn-table-paging");
 
         let hnTableCover = document.createElement("div");
         hnTableCover.classList.add("hn-table-cover");
@@ -424,55 +421,29 @@
 
         let hnTableTbBd = document.createElement("table");
         hnTableTbBd.classList.add("hn-table-bd");
+
+        hnTableCover.insertAdjacentElement("beforeend", hnTableTbHd);
+        hnTableCover.insertAdjacentElement("beforeend", hnTableTbBd);
+
+        _target.insertAdjacentElement("beforeend", hnTableCover);
+
+        if (typeof _config.pageOption != "boolean") {
+            if (_config.pageOption && typeof _config.pageOption.scrolling != "undefined" && _config.pageOption.scrolling == false) {
+                let hnTablePagination = document.createElement("div");
+                hnTablePagination.classList.add("hn-table-pagination");
+                if (!_target.getAttribute("page")) {
+                    _target.setAttribute("page", "1");
+                }
+                _target.setAttribute("hn-table-pagination", true);
+                _target.insertAdjacentElement("beforeend", hnTablePagination);
+            }
+        }
+
         if (data.length > 0) {
             let hnTableBody = document.createElement("tbody");
             hnTableBody.classList.add("hn-table-body");
-            data.forEach(function (obj, idx) {
-                let hnTableRow = document.createElement("tr");
-                hnTableRow.classList.add("hn-table-row");
-                hnTableRow.setAttribute("hn-table-row-num", idx);
-
-                Object.keys(columns).forEach(function (key) {
-                    let hnTableCell = document.createElement("td");
-                    hnTableCell.classList.add("hn-table-cell");
-                    hnTableCell.setAttribute("hn-table-column", key);
-                    if (obj[key]) {
-                        if (_config.columns[key] && _config.columns[key]["format"] && _config.columns[key]["format"] == "locale") {
-                            hnTableCell.innerText = Number(obj[key]).toLocaleString();
-                        } else if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
-                            let r = _config.columns[key]["format"](obj[key], obj);
-                            if (r && typeof r != "function" && typeof r != "object") {
-                                hnTableCell.innerText = r;
-                            } else {
-                                hnTableCell.innerText = "";
-                            }
-                        } else {
-                            hnTableCell.innerText = obj[key];
-                        }
-                    } else {
-                        if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
-                            let r = _config.columns[key]["format"](obj[key], obj);
-                            if (r && typeof r != "function" && typeof r != "object") {
-                                hnTableCell.innerText = r;
-                            } else {
-                                hnTableCell.innerText = "";
-                            }
-                        } else {
-                            hnTableCell.innerText = obj[key];
-                        }
-                    }
-                    if (_config.columns[key] && _config.columns[key]["cellEvent"] && _getObjType(_config.columns[key]["cellEvent"]) == "map") {
-                        Object.keys(_config.columns[key]["cellEvent"]).forEach(function (eKey) {
-                            hnTableCell.addEventListener(eKey, function (e) {
-                                let r = _config.columns[key]["cellEvent"][eKey](e, hnTableCell, obj[key], obj);
-                                if (typeof r == "boolean") {
-                                    return r;
-                                }
-                            });
-                        });
-                    }
-                    hnTableRow.insertAdjacentElement("beforeend", hnTableCell);
-                });
+            let hnTableRows = _setPage();
+            hnTableRows.forEach(function (hnTableRow) {
                 hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
             });
             hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
@@ -482,11 +453,6 @@
             hnTableEmpty.innerText = _config.string[_config.lang].empty;
             hnTableCover.insertAdjacentElement("beforeend", hnTableEmpty);
         }
-        hnTableCover.insertAdjacentElement("beforeend", hnTableTbHd);
-        hnTableCover.insertAdjacentElement("beforeend", hnTableTbBd);
-
-        _target.insertAdjacentElement("beforeend", hnTableCover);
-        _target.insertAdjacentElement("beforeend", hnTablePaging);
 
         _setColumnWidth(_target);
 
@@ -705,8 +671,164 @@
         });
     }
 
-    let _setPaging = function () {
+    let _setPage = function () {
+        if (this) {
+            _config = this.config;
+            _target = this.config.target;
+        }
 
+        let data = _config.data;
+        let columns = _config.columns;
+        let hnTableRows = [];
+
+        if (_config.pageOption && _config.pageOption.type == "client") {
+            data = [];
+            let _data = _config.data;
+
+            let perPage = Number(_config.pageOption.perPage ? _config.pageOption.perPage : "5");
+            let perIdx = Number(_config.pageOption.perIdx ? _config.pageOption.perIdx : "10");
+            let curPage = Number(_target.getAttribute("page"));
+            let totalPage = (_data.length % perIdx) == 0 ? _data.length / perIdx : Math.floor(_data.length / perIdx) + 1;
+
+            let startPage = Math.ceil(curPage/perPage)>1?Math.ceil(curPage/perPage)*perPage-perPage+1:1;
+            let endPage = startPage + perPage -1;
+            if (endPage > totalPage) {
+                endPage = totalPage;
+            }
+
+            let startIdx = (curPage - 1) * perIdx
+            let endIdx = startIdx + perIdx - 1;
+            if (endIdx > _data.length-1) {
+                endIdx = _data.length-1;
+            }
+
+            for (let i = startIdx; i <= endIdx; i++) {
+                _data[i].idx = i;
+                data.push(_data[i]);
+            }
+
+            _target.querySelector(".hn-table-pagination").querySelectorAll("ul").forEach(function (el) {
+                el.remove();
+            });
+
+            let pageUl = document.createElement("ul");
+
+            for (let i = startPage; i <= endPage; i++) {
+                if (startPage > 1 && i == startPage) {
+                    let prevBtn = document.createElement("li");
+                    prevBtn.innerText = "<<";
+                    prevBtn.classList.add("hn-table-page-prev");
+                    pageUl.insertAdjacentElement("beforeend", prevBtn);
+                    prevBtn.addEventListener("click", function () {
+                        movePage(startPage-1);
+                    });
+                }
+
+                let pageBtn = document.createElement("li");
+                pageBtn.classList.add("hn-table-page-no");
+                pageBtn.innerText = i;
+                pageUl.insertAdjacentElement("beforeend", pageBtn);
+                if (curPage == i) {
+                    pageBtn.classList.add("curPage");
+                }
+
+                pageBtn.addEventListener("click", function () {
+                    movePage(i);
+                });
+
+                if (endPage < totalPage && i == endPage) {
+                    let nextBtn = document.createElement("li");
+                    nextBtn.innerText = ">>";
+                    nextBtn.classList.add("hn-table-page-next");
+                    pageUl.insertAdjacentElement("beforeend", nextBtn);
+                    nextBtn.addEventListener("click", function () {
+                        movePage(endPage+1);
+                    });
+                }
+
+                let movePage = function (page) {
+                    _target.setAttribute("page", page);
+                    let hnTableTbBd = _target.querySelector(".hn-table-bd");
+
+                    hnTableTbBd.querySelectorAll(".hn-table-body").forEach(function (el) {
+                        el.remove();
+                    });
+
+                    let hnTableBody = document.createElement("tbody");
+                    hnTableBody.classList.add("hn-table-body");
+                    let hnTableRows = _setPage();
+                    hnTableRows.forEach(function (hnTableRow) {
+                        hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
+                    });
+                    hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+
+                    let hnTableTbHd = _target.querySelector(".hn-table-hd");
+                    _setColumnWidth(_target);
+
+                    if (!_config.colHeadFixed) {
+                        hnTableTbHd.style.position = "inherit";
+                    }
+                    if (_config.resizeable) {
+                        _resizeable(hnTableTbHd, hnTableTbBd);
+                    }
+                }
+            }
+            _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
+        }
+
+        data.forEach(function (obj, idx) {
+            let hnTableRow = document.createElement("tr");
+            hnTableRow.classList.add("hn-table-row");
+            if (obj.idx) {
+                hnTableRow.setAttribute("hn-table-row-num", obj.idx);
+            } else {
+                hnTableRow.setAttribute("hn-table-row-num", idx);
+            }
+
+            Object.keys(columns).forEach(function (key) {
+                let hnTableCell = document.createElement("td");
+                hnTableCell.classList.add("hn-table-cell");
+                hnTableCell.setAttribute("hn-table-column", key);
+                if (obj[key]) {
+                    if (_config.columns[key] && _config.columns[key]["format"] && _config.columns[key]["format"] == "locale") {
+                        hnTableCell.innerText = Number(obj[key]).toLocaleString();
+                    } else if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
+                        let r = _config.columns[key]["format"](obj[key], obj);
+                        if (r && typeof r != "function" && typeof r != "object") {
+                            hnTableCell.innerText = r;
+                        } else {
+                            hnTableCell.innerText = "";
+                        }
+                    } else {
+                        hnTableCell.innerText = obj[key];
+                    }
+                } else {
+                    if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
+                        let r = _config.columns[key]["format"](obj[key], obj);
+                        if (r && typeof r != "function" && typeof r != "object") {
+                            hnTableCell.innerText = r;
+                        } else {
+                            hnTableCell.innerText = "";
+                        }
+                    } else {
+                        hnTableCell.innerText = obj[key];
+                    }
+                }
+                if (_config.columns[key] && _config.columns[key]["cellEvent"] && _getObjType(_config.columns[key]["cellEvent"]) == "map") {
+                    Object.keys(_config.columns[key]["cellEvent"]).forEach(function (eKey) {
+                        hnTableCell.addEventListener(eKey, function (e) {
+                            let r = _config.columns[key]["cellEvent"][eKey](e, hnTableCell, obj[key], obj);
+                            if (typeof r == "boolean") {
+                                return r;
+                            }
+                        });
+                    });
+                }
+                hnTableRow.insertAdjacentElement("beforeend", hnTableCell);
+            });
+            hnTableRows.push(hnTableRow);
+        });
+        return hnTableRows;
     }
 
     let _resizeable = function (thead, tbody) {

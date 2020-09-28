@@ -14,6 +14,7 @@
             "0006": "입력한 파라미터에 해당하는 열을 찾을 수 없습니다.",
             "0007": "설정의 'target'에 대한 Element를 찾을 수 없습니다.",
             "0008": "설정의 'target' 타입이 올바르지 않습니다.",
+            "0009": "'serverOption' 설정에서 'url'을 찾을 수 없습니다."
         },
         eng: {
             "0001": "Mismatching 'columns' Object type.(The columns is of type [])",
@@ -23,7 +24,8 @@
             "0005": "The row corresponding to the index you entered cannot be found.",
             "0006": "The column corresponding to the parameter you entered cannot be found.",
             "0007": "Element not found for 'target' in settings.",
-            "0008": "The 'target' type of settings is not correct."
+            "0008": "The 'target' type of settings is not correct.",
+            "0009": "Not found for 'url' in 'serverOption' settings."
         }
     };
 
@@ -34,13 +36,14 @@
         target: "",
         numberColumn: false,
         /**
-         * example-
+         * example
          * columns: {
          *     test: {
          *         markText: "TEST",        [Optional]
          *         type: "string",          [Optional]
          *         sortAble: true           [Optional]
          *         edit: true               [Optional]
+         *         textAlign: "left"        [Optional]
          *         width: "10%"             [Optional]
          *         cellEvent: ()  {},     [Optional]
          *         headEvent: ()  {},     [Optional]
@@ -55,7 +58,7 @@
          *      key: value
          * }]
          */
-        data: [],
+        /*data: [],*/
         lang: "ko",
         /*pageOption: {
             type: "client",
@@ -79,7 +82,7 @@
 
     let _bindEvent = {
         'click': '',
-        'dbclick': '',
+        'dblclick': '',
         'change': ''
     }
 
@@ -92,7 +95,7 @@
 
         if (typeof _target === "string") {
             _config.target = document.querySelector(_target);
-        } else if ((jQuery && _target instanceof jQuery.fn.init) || ($ && _target instanceof ($.fn || $.fn.init))) {
+        } else if ((window.jQuery && _target instanceof window.jQuery.fn.init) || (window.$ && _target instanceof (window.$.fn || (window.$.fn && window.$.fn.init)))) {
             _config.target = _target[0];
         }
 
@@ -131,6 +134,27 @@
         return _getInstance(callInstance);
     }
 
+    /**
+     * Hntable modal
+     * @param option
+     * {
+     *     title: (String)
+     *     content: (String)
+     *     contentType (String) - "text"(default),"html"
+     *     width: (Number or String) - Number is pixel, String is percent,
+     *     height: (Number or String) - Number is pixel, String is percent
+     *     buttons: {
+     *         confirm: {
+     *             event: (Function)
+     *         },
+     *         cancel: {
+     *             event: (Function)
+     *         }
+     *     },
+     *     verticalAlign: boolean,
+     *     showEvent: (Function) - modal show after Activation event
+     * }
+     */
     hnTable.modal = function (option) {
         let _option = {
             title: "untitle",
@@ -146,7 +170,7 @@
                     name: "확인"
                 }
             },
-            verticalAlign: "center"
+            verticalAlign: "middle"
         }
         if (option) {
             _option = _extend(true, _option, option);
@@ -161,14 +185,31 @@
         let hnTableModal = document.createElement("div");
         hnTableModal.classList.add("hn-table-modal");
 
-
         if (_option.width) {
-            hnTableModal.style.width = _option.width + "px";
-            hnTableModal.style.left = "calc(50% - " + (_option.width / 2) + "px)";
+            if (typeof _option.width == "string" && _option.width.indexOf("%")) {
+                hnTableModal.style.width = _option.width;
+                hnTableModal.style.left = (100 - Number(_option.width.replace("%", ""))) / 2 + "%";
+            } else {
+                hnTableModal.style.width = _option.width + "px";
+                hnTableModal.style.left = "calc(50% - " + (_option.width / 2) + "px)";
+            }
         }
         if (_option.height) {
-            hnTableModal.style.height = _option.height + "px";
-            hnTableModal.style.top = "calc(50% - " + (_option.height / 2) + "px)";
+            if (typeof _option.height == "string" && _option.height.indexOf("%") >= 0) {
+                hnTableModal.style.height = _option.height;
+                hnTableModal.style.top = (100 - Number(_option.height.replace("%", ""))) / 2 + "%";
+            } else if (typeof _option.height == "string" && _option.height == "fit-content") {
+                hnTableModal.style.height = "initial";
+                hnTableModal.style.top = "20px";
+            } else {
+                hnTableModal.style.height = _option.height + "px";
+                hnTableModal.style.top = "calc(50% - " + (_option.height / 2) + "px)";
+            }
+        }
+        if (_option.maxHeight) {
+            if (typeof _option.maxHeight == "string" && _option.maxHeight.indexOf("%") >= 0) {
+                hnTableModal.style.maxHeight = "calc(" + _option.maxHeight + " - 20px )";
+            }
         }
 
         hnTableModalOverlay.insertAdjacentElement("beforeend", hnTableModal);
@@ -249,11 +290,21 @@
                 }
                 if (_option.buttons.cancel.event) {
                     cancelButton.addEventListener("click", _option.buttons.cancel.event);
+                } else {
+                    cancelButton.addEventListener("click", function () {
+                        hnTableModalOverlay.remove();
+                    });
                 }
                 hnTableModalButtons.insertAdjacentElement("beforeend", cancelButton);
             }
         }
         document.querySelector("body").insertAdjacentElement("beforeend", hnTableModalOverlay);
+        if (_option.showEvent && typeof _option.showEvent == "function") {
+            _option.showEvent({
+                title: hnTableModalTitleText,
+                content: hnTableModalContent
+            });
+        }
     }
 
     hnTable.showLoading = function (el) {
@@ -439,28 +490,68 @@
             }
         }
 
-        if (data.length > 0) {
-            let hnTableBody = document.createElement("tbody");
-            hnTableBody.classList.add("hn-table-body");
-            let hnTableRows = _setPage();
-            hnTableRows.forEach(function (hnTableRow) {
-                hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
-            });
-            hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+        if (data && data.length > 0) {
+            tBodySet();
+        } else if (!data && (_config.pageOption && _config.pageOption.serverOption)) {
+            if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
+                let _serverOption = _config.pageOption.serverOption;
+                let _perPage = _config.pageOption.perPage ? _config.pageOption.perPage : 5;
+                let _perIdx = _config.pageOption.perIdx ? _config.pageOption.perIdx : 10;
+                if (!data) {
+                    let url = _serverOption.url;
+                    let method = _serverOption.method ? _serverOption.method : "get";
+                    if (!url) {
+                        throw new Error(_getErrorMsg("0009"));
+                    } else {
+                        let dataParam = {};
+                        if (_serverOption.mapping) {
+                            let startRowNum = _serverOption.mapping.startRow ? _serverOption.mapping.startRow : "startRow";
+                            let endRowNum = _serverOption.mapping.endRow ? _serverOption.mapping.endRow : "endRow";
+                            dataParam[startRowNum] = 0;
+                            dataParam[endRowNum] = _perIdx;
+                        }
+                        _rest({
+                            url: url,
+                            method: method,
+                            data: dataParam,
+                            type: "json"
+                        }).then(function (result) {
+                            _config.data = result;
+                            tBodySet();
+                        });
+                    }
+                } else {
+                    tBodySet();
+                }
+            }
         } else {
-            let hnTableEmpty = document.createElement("div");
-            hnTableEmpty.classList.add("hn-table-empty");
-            hnTableEmpty.innerText = _config.string[_config.lang].empty;
-            hnTableCover.insertAdjacentElement("beforeend", hnTableEmpty);
+            tBodySet(true);
         }
 
-        _setColumnWidth(_target);
+        let tBodySet = function (empty) {
+            if (empty) {
+                let hnTableEmpty = document.createElement("div");
+                hnTableEmpty.classList.add("hn-table-empty");
+                hnTableEmpty.innerText = _config.string[_config.lang].empty;
+                hnTableCover.insertAdjacentElement("beforeend", hnTableEmpty);
+            } else {
+                let hnTableBody = document.createElement("tbody");
+                hnTableBody.classList.add("hn-table-body");
+                let hnTableRows = _setPage();
+                hnTableRows.forEach(function (hnTableRow) {
+                    hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
+                });
+                hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+            }
 
-        if (!_config.colHeadFixed) {
-            hnTableTbHd.style.position = "inherit";
-        }
-        if (_config.resizeable) {
-            _resizeable(hnTableTbHd, hnTableTbBd);
+            _setColumnWidth(_target);
+
+            if (!_config.colHeadFixed) {
+                hnTableTbHd.style.position = "inherit";
+            }
+            if (_config.resizeable) {
+                _resizeable(hnTableTbHd, hnTableTbBd);
+            }
         }
     }
 
@@ -497,7 +588,9 @@
 
         existWidthColumns.forEach(function (key) {
             _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width + "px";
-            _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+            if (_target.querySelector("td[hn-table-column='" + key + "']")) {
+                _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+            }
         });
 
         notExistWidthColumns.forEach(function (key, idx) {
@@ -622,53 +715,110 @@
     }
 
     let _rest = function (option) {
+        let _self = this;
         let method = (option.method ? option.method : "GET").toUpperCase();
         let url = option.url;
         let type = (option.type ? (option.type.toLowerCase() == "json" ? "text" : option.type) : "text").toLowerCase();
-        let progress = typeof option.progress == "boolean" ? option.progress : true;
+        let contentType = option.contentType ? option.contentType : "application/x-www-form-urlencoded; charset=UTF-8";
+        let progress = typeof option.progress == "boolean" ? option.progress : false;
+        let async = option.async && option.async == false ? option.async : true;
+        let xcsrf = option.xcsrf == true ? true : false;
+        if (progress) {
+            hnTable.showLoading();
+        }
         return new Promise(function (resolve, reject) {
             const xhr = new XMLHttpRequest();
-            if (option.requestHeader && _getObjType(option.requestHeader) == "map") {
-                Object(option.requestHeader).keys().forEach(function (key) {
-                    xhr.setRequestHeader(key, option.requestHeader[key]);
-                })
+            xhr.open(method, url, async);
+            xhr.setRequestHeader("Content-Type", contentType);
+            if (xcsrf && _self.getCsrf().token) {
+                xhr.setRequestHeader("Content-Encoding", "gzip");
+                xhr.setRequestHeader("X-CSRF-TOKEN", _self.getCsrf().token);
+                xhr.setRequestHeader("AJAX", true);
             }
-            xhr.open(method, url);
+            if (option.requestHeader) {
+                Object.keys(option.requestHeader).forEach(function (key) {
+                    xhr.setRequestHeader(key, option.requestHeader[key])
+                });
+            }
             xhr.onload = function () {
                 if (xhr.status == 200) {
                     let response = xhr.response;
                     if (option.type && option.type.toLowerCase() == "json") {
                         resolve(JSON.parse(response));
+                    } else if (option.type && option.type.toLowerCase() == "blob") {
+                        let reader = new FileReader();
+                        reader.onloadend = function () {
+                            resolve(reader.result);
+                        }
                     } else {
                         resolve(response);
                     }
+                }
+                if (progress) {
+                    hnTable.hideLoading();
                 }
             };
 
             xhr.onerror = function () {
                 reject("Network Error");
+                if (progress) {
+                    hnTable.hideLoading();
+                }
             }
 
             if (method == "POST" && option.data) {
-                xhr.responseType = type;
-                let params = "";
-                if (option.data instanceof Object) {
-                    Object.keys(option.data).forEach(function (key, idx) {
-                        if (idx != Object.keys(option.data).length) {
-                            params += (key + "=" + option.data[key] + "&");
-                        } else {
-                            params += (key + "=" + option.data[key]);
+                if (contentType == "")
+                    xhr.responseType = type;
+                if (contentType.toLowerCase().includes("application/x-www-form-urlencoded")) {
+                    if (option.data instanceof FormData) {
+                        let params = "";
+                        let obj = {};
+                        for (let key of option.data.keys()) {
+                            obj[key] = option.data.get(key);
                         }
-                    });
+                        Object.keys(obj).forEach(function (key, idx) {
+                            if (idx != Object.keys(obj).length - 1) {
+                                params += (key + "=" + obj[key] + "&");
+                            } else {
+                                params += (key + "=" + obj[key]);
+                            }
+                        });
+                        xhr.send(params);
+                    } else if (option.data instanceof Element && option.data.tagName == "FORM") {
+                        let params = "";
+                        let obj = {};
+                        option.data = new FormData(option.data);
+                        for (let key of option.data.keys()) {
+                            obj[key] = option.data.get(key);
+                        }
+                        Object.keys(obj).forEach(function (key, idx) {
+                            if (idx != Object.keys(obj).length - 1) {
+                                params += (key + "=" + obj[key] + "&");
+                            } else {
+                                params += (key + "=" + obj[key]);
+                            }
+                        });
+                        xhr.send(params);
+                    } else {
+                        let params = "";
+                        Object.keys(option.data).forEach(function (key, idx) {
+                            if (idx != Object.keys(option.data).length - 1) {
+                                params += (key + "=" + option.data[key] + "&");
+                            } else {
+                                params += (key + "=" + option.data[key]);
+                            }
+                        });
+                        xhr.send(params);
+                    }
+                } else if (contentType.toLowerCase().includes("application/json")) {
+                    xhr.send(JSON.stringify(option.data));
+                } else {
+                    xhr.send(option.data);
                 }
-                xhr.send(params);
             } else {
                 xhr.send();
             }
-
-        }).finally(function () {
-
-        });
+        })
     }
 
     let _setPage = function () {
@@ -677,12 +827,11 @@
             _target = this.config.target;
         }
 
-        let data = _config.data;
+        let data = [];
         let columns = _config.columns;
         let hnTableRows = [];
 
         if (_config.pageOption && _config.pageOption.type == "client") {
-            data = [];
             let _data = _config.data;
 
             let perPage = Number(_config.pageOption.perPage ? _config.pageOption.perPage : "5");
@@ -690,16 +839,16 @@
             let curPage = Number(_target.getAttribute("page"));
             let totalPage = (_data.length % perIdx) == 0 ? _data.length / perIdx : Math.floor(_data.length / perIdx) + 1;
 
-            let startPage = Math.ceil(curPage/perPage)>1?Math.ceil(curPage/perPage)*perPage-perPage+1:1;
-            let endPage = startPage + perPage -1;
+            let startPage = Math.ceil(curPage / perPage) > 1 ? Math.ceil(curPage / perPage) * perPage - perPage + 1 : 1;
+            let endPage = startPage + perPage - 1;
             if (endPage > totalPage) {
                 endPage = totalPage;
             }
 
             let startIdx = (curPage - 1) * perIdx
             let endIdx = startIdx + perIdx - 1;
-            if (endIdx > _data.length-1) {
-                endIdx = _data.length-1;
+            if (endIdx > _data.length - 1) {
+                endIdx = _data.length - 1;
             }
 
             for (let i = startIdx; i <= endIdx; i++) {
@@ -712,21 +861,22 @@
             });
 
             let pageUl = document.createElement("ul");
+            pageUl.classList.add("pagination");
 
             for (let i = startPage; i <= endPage; i++) {
                 if (startPage > 1 && i == startPage) {
                     let prevBtn = document.createElement("li");
-                    prevBtn.innerText = "<<";
-                    prevBtn.classList.add("hn-table-page-prev");
+                    prevBtn.innerHTML = "<a class='page-link'><<</a>";
+                    prevBtn.classList.add("hn-table-page-prev", "page-item");
                     pageUl.insertAdjacentElement("beforeend", prevBtn);
                     prevBtn.addEventListener("click", function () {
-                        movePage(startPage-1);
+                        movePage(startPage - 1);
                     });
                 }
 
                 let pageBtn = document.createElement("li");
-                pageBtn.classList.add("hn-table-page-no");
-                pageBtn.innerText = i;
+                pageBtn.classList.add("hn-table-page-no", "page-item");
+                pageBtn.innerHTML = "<a class='page-link'>" + i + "</a>";
                 pageUl.insertAdjacentElement("beforeend", pageBtn);
                 if (curPage == i) {
                     pageBtn.classList.add("curPage");
@@ -738,11 +888,11 @@
 
                 if (endPage < totalPage && i == endPage) {
                     let nextBtn = document.createElement("li");
-                    nextBtn.innerText = ">>";
-                    nextBtn.classList.add("hn-table-page-next");
+                    nextBtn.innerHTML = "<a class='page-link'>>></a>";
+                    nextBtn.classList.add("hn-table-page-next", "page-item");
                     pageUl.insertAdjacentElement("beforeend", nextBtn);
                     nextBtn.addEventListener("click", function () {
-                        movePage(endPage+1);
+                        movePage(endPage + 1);
                     });
                 }
 
@@ -774,8 +924,129 @@
                 }
             }
             _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
-        }
+        } else if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
+            let _serverOption = _config.pageOption.serverOption;
+            let totalRowText = (_serverOption&&_serverOption.mapping&&_serverOption.mapping.totalRow)?(_serverOption&&_serverOption.mapping&&_serverOption.mapping.totalRow):"totalRow";
+            let startRowText = (_serverOption&&_serverOption.mapping&&_serverOption.mapping.startRow)?(_serverOption&&_serverOption.mapping&&_serverOption.mapping.startRow):"startRow";
+            let endRowText = (_serverOption&&_serverOption.mapping&&_serverOption.mapping.endRow)?(_serverOption&&_serverOption.mapping&&_serverOption.mapping.endRow):"endRow";
+            let url = "";
+            let method = _serverOption && _serverOption.method?_serverOption.method:"get";
+            if(_serverOption&&_serverOption.url) {
+                url = _serverOption.url;
+            } else {
+                throw new Error(_getErrorMsg("0009"));
+            }
 
+            let _data = _config.data;
+
+            let perPage = Number(_config.pageOption.perPage ? _config.pageOption.perPage : "5");
+            let perIdx = Number(_config.pageOption.perIdx ? _config.pageOption.perIdx : "10");
+            let curPage = Number(_target.getAttribute("page"));
+            let totalPage = 1;
+            let totalRow = 1;
+            if(_data && _data[0] && _data[0][totalRowText]) {
+                totalRow = _data[0][totalRowText];
+                totalPage = (totalRow % perIdx) == 0 ? totalRow / perIdx : Math.floor(totalRow / perIdx) + 1;
+            }
+
+            let startPage = Math.ceil(curPage / perPage) > 1 ? Math.ceil(curPage / perPage) * perPage - perPage + 1 : 1;
+            let endPage = startPage + perPage - 1;
+            if (endPage > totalPage) {
+                endPage = totalPage;
+            }
+
+            let startIdx = (curPage - 1) * perIdx
+
+            for(let i=0; i<_data.length; i++){
+                _data[i].idx = startIdx;
+                data.push(_data[i]);
+                startIdx ++;
+
+            }
+
+            _target.querySelector(".hn-table-pagination").querySelectorAll("ul").forEach(function (el) {
+                el.remove();
+            });
+
+            let pageUl = document.createElement("ul");
+            pageUl.classList.add("pagination");
+
+            for (let i = startPage; i <= endPage; i++) {
+                if (startPage > 1 && i == startPage) {
+                    let prevBtn = document.createElement("li");
+                    prevBtn.innerHTML = "<a class='page-link'><<</a>";
+                    prevBtn.classList.add("hn-table-page-prev", "page-item");
+                    pageUl.insertAdjacentElement("beforeend", prevBtn);
+                    prevBtn.addEventListener("click", function () {
+                        movePage(startPage - 1);
+                    });
+                }
+
+                let pageBtn = document.createElement("li");
+                pageBtn.classList.add("hn-table-page-no", "page-item");
+                pageBtn.innerHTML = "<a class='page-link'>" + i + "</a>";
+                pageUl.insertAdjacentElement("beforeend", pageBtn);
+                if (curPage == i) {
+                    pageBtn.classList.add("curPage");
+                }
+
+                pageBtn.addEventListener("click", function () {
+                    movePage(i);
+                });
+
+                if (endPage < totalPage && i == endPage) {
+                    let nextBtn = document.createElement("li");
+                    nextBtn.innerHTML = "<a class='page-link'>>></a>";
+                    nextBtn.classList.add("hn-table-page-next", "page-item");
+                    pageUl.insertAdjacentElement("beforeend", nextBtn);
+                    nextBtn.addEventListener("click", function () {
+                        movePage(endPage + 1);
+                    });
+                }
+
+                let movePage = function (page) {
+                    _target.setAttribute("page", page);
+                    let hnTableTbBd = _target.querySelector(".hn-table-bd");
+
+                    hnTableTbBd.querySelectorAll(".hn-table-body").forEach(function (el) {
+                        el.remove();
+                    });
+
+                    let hnTableBody = document.createElement("tbody");
+                    hnTableBody.classList.add("hn-table-body");
+
+                    let dataParam = {}
+                    dataParam[startRowText] = (page-1)*perIdx;
+                    dataParam[endRowText] = perIdx;
+
+
+                    _rest({
+                        url: url,
+                        method: method,
+                        data: dataParam,
+                        type: "json"
+                    }).then(function (result) {
+                        _config.data = result;
+                        let hnTableRows = _setPage();
+                        hnTableRows.forEach(function (hnTableRow) {
+                            hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
+                        });
+                        hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+
+                        let hnTableTbHd = _target.querySelector(".hn-table-hd");
+                        _setColumnWidth(_target);
+
+                        if (!_config.colHeadFixed) {
+                            hnTableTbHd.style.position = "inherit";
+                        }
+                        if (_config.resizeable) {
+                            _resizeable(hnTableTbHd, hnTableTbBd);
+                        }
+                    })
+                }
+            }
+            _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
+        }
         data.forEach(function (obj, idx) {
             let hnTableRow = document.createElement("tr");
             hnTableRow.classList.add("hn-table-row");
@@ -801,6 +1072,9 @@
                         }
                     } else {
                         hnTableCell.innerText = obj[key];
+                    }
+                    if (_config.columns[key] && _config.columns[key]["textAlign"]) {
+                        hnTableCell.style.textAlign = _config.columns[key]["textAlign"];
                     }
                 } else {
                     if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
@@ -828,6 +1102,7 @@
             });
             hnTableRows.push(hnTableRow);
         });
+
         return hnTableRows;
     }
 

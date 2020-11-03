@@ -117,6 +117,7 @@
         this.getCellData = _getCellData;
         this.initTable = _initTable;
         this.setPage = _setPage;
+        this.setColumnWidth = _setColumnWidth;
 
         let instance = {
             instance: this,
@@ -125,7 +126,7 @@
         }
 
         _addInstance(instance);
-        _initTable(this.config.columns, this.config.data);
+        this.initTable(this.config.columns, this.config.data);
 
         return this;
     };
@@ -165,7 +166,7 @@
             buttons: {
                 confirm: {
                     event: function () {
-                        console.log("confirm Click");
+
                     },
                     name: "확인"
                 }
@@ -393,19 +394,23 @@
         _instance.push(instance);
     };
 
-    let _initTable = function (columns, data) {
-        if (this) {
-            _config = this.config;
-            _target = this.config.target;
-            columns = _config.columns;
-            data = _config.data;
-            _target.removeAttribute("hn-table-pagination");
-            if (_target.querySelector(".hn-table-cover")) {
-                _target.querySelector(".hn-table-cover").remove();
-            }
-            if (_target.querySelector(".hn-table-pagination")) {
-                _target.querySelector(".hn-table-pagination").remove();
-            }
+    let _initTable = function () {
+        let _this = this;
+        let _config = _this.config;
+        let _target = _this.config.target;
+        let columns = _this.config.columns;
+        let data = _this.config.data;
+
+        if(_this.config && _this.config.pageOption && _this.config.pageOption.type == "server") {
+            data = [];
+        }
+
+        _target.removeAttribute("hn-table-pagination");
+        if (_target.querySelector(".hn-table-cover")) {
+            _target.querySelector(".hn-table-cover").remove();
+        }
+        if (_target.querySelector(".hn-table-pagination")) {
+            _target.querySelector(".hn-table-pagination").remove();
         }
 
         if (typeof columns == "object" && columns instanceof Array) {
@@ -438,6 +443,22 @@
         hnTableHeaderRow.classList.add("hn-table-row");
         hnTableHeader.insertAdjacentElement("beforeend", hnTableHeaderRow);
 
+
+        let childColumnsUsed = false;
+        Object.keys(columns).forEach(function (key) {
+            if(columns[key].childColumns) {
+                childColumnsUsed = true;
+            }
+        });
+
+        let hnTableHeaderChildRow;
+
+        if(childColumnsUsed) {
+            hnTableHeaderChildRow = document.createElement("tr");
+            hnTableHeaderChildRow.classList.add("hn-table-child-row");
+            hnTableHeader.insertAdjacentElement("beforeend", hnTableHeaderChildRow);
+        }
+
         if (Object.keys(columns).length > 0) {
             Object.keys(columns).forEach(function (key) {
                 let markText = key;
@@ -445,11 +466,32 @@
                     markText = columns[key].markText;
                 }
                 let hnTableHead = document.createElement("th");
+                if(!columns[key].childColumns && childColumnsUsed) {
+                    hnTableHead.rowSpan = 2;
+                }
+                if(columns[key].childColumns){
+                    let childColumns = columns[key].childColumns;
+                    let pKey = key;
+                    hnTableHead.colSpan = Object.keys(childColumns).length;
+                        Object.keys(childColumns).forEach(function (key) {
+                        let childColumnMarkText = key;
+                        if (childColumns[key].markText) {
+                            childColumnMarkText = childColumns[key].markText;
+                        }
+                        let hnTableHeadChild = document.createElement("th");
+                        hnTableHeadChild.classList.add("hn-table-child-head");
+                        hnTableHeadChild.setAttribute("hn-table-parent-column-key", pKey);
+                        hnTableHeadChild.setAttribute("hn-table-child-column-key", key);
+                        hnTableHeadChild.innerText = childColumnMarkText;
+                        hnTableHeaderChildRow.insertAdjacentElement("beforeend", hnTableHeadChild);
+                    });
+                }
                 hnTableHead.classList.add("hn-table-head");
                 hnTableHead.setAttribute("hn-table-column-key", key);
                 hnTableHead.innerText = markText;
                 hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
             });
+
         } else {
             if (data.length > 0) {
                 columns = {};
@@ -490,14 +532,40 @@
             }
         }
 
+        let tBodySet = function (empty) {
+            if (empty) {
+                let hnTableEmpty = document.createElement("div");
+                hnTableEmpty.classList.add("hn-table-empty");
+                hnTableEmpty.innerText = _config.string[_config.lang].empty;
+                hnTableCover.insertAdjacentElement("beforeend", hnTableEmpty);
+            } else {
+                let hnTableBody = document.createElement("tbody");
+                hnTableBody.classList.add("hn-table-body");
+                let hnTableRows = _this.setPage();
+                hnTableRows.forEach(function (hnTableRow) {
+                    hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
+                });
+                hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+            }
+
+            _this.setColumnWidth(_target);
+
+            if (!_config.colHeadFixed) {
+                hnTableTbHd.style.position = "inherit";
+            }
+            if (_config.resizeable) {
+                _resizeable(hnTableTbHd, hnTableTbBd);
+            }
+        }
+
         if (data && data.length > 0) {
             tBodySet();
-        } else if (!data && (_config.pageOption && _config.pageOption.serverOption)) {
+        } else if (data.length == 0 && (_config.pageOption && _config.pageOption.serverOption)) {
             if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
                 let _serverOption = _config.pageOption.serverOption;
                 let _perPage = _config.pageOption.perPage ? _config.pageOption.perPage : 5;
                 let _perIdx = _config.pageOption.perIdx ? _config.pageOption.perIdx : 10;
-                if (!data) {
+                if (data.length == 0) {
                     let url = _serverOption.url;
                     let method = _serverOption.method ? _serverOption.method : "get";
                     if (!url) {
@@ -505,10 +573,17 @@
                     } else {
                         let dataParam = {};
                         if (_serverOption.mapping) {
+                            let page = _target.getAttribute("page");
                             let startRowNum = _serverOption.mapping.startRow ? _serverOption.mapping.startRow : "startRow";
                             let endRowNum = _serverOption.mapping.endRow ? _serverOption.mapping.endRow : "endRow";
-                            dataParam[startRowNum] = 0;
+                            dataParam[startRowNum] = page==1?0:_perIdx*page-_perIdx;
                             dataParam[endRowNum] = _perIdx;
+                        }
+                        if (_serverOption.data) {
+                            let optionParam = _serverOption.data();
+                            Object.keys(optionParam).forEach(function (key) {
+                               dataParam[key] = optionParam[key]
+                            });
                         }
                         _rest({
                             url: url,
@@ -527,37 +602,14 @@
         } else {
             tBodySet(true);
         }
-
-        let tBodySet = function (empty) {
-            if (empty) {
-                let hnTableEmpty = document.createElement("div");
-                hnTableEmpty.classList.add("hn-table-empty");
-                hnTableEmpty.innerText = _config.string[_config.lang].empty;
-                hnTableCover.insertAdjacentElement("beforeend", hnTableEmpty);
-            } else {
-                let hnTableBody = document.createElement("tbody");
-                hnTableBody.classList.add("hn-table-body");
-                let hnTableRows = _setPage();
-                hnTableRows.forEach(function (hnTableRow) {
-                    hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
-                });
-                hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
-            }
-
-            _setColumnWidth(_target);
-
-            if (!_config.colHeadFixed) {
-                hnTableTbHd.style.position = "inherit";
-            }
-            if (_config.resizeable) {
-                _resizeable(hnTableTbHd, hnTableTbBd);
-            }
-        }
     }
 
-    let _setColumnWidth = function (_target) {
+    let _setColumnWidth = function () {
+        let _this = this;
+        let _target = _this.config.target;
+
         let targetWidth = _target.offsetWidth;
-        let columns = _config.columns;
+        let columns = _this.config.columns;
         let existWidthColumns = Object.keys(columns).filter(function (key) {
             return columns[key].width;
         });
@@ -566,7 +618,7 @@
             if (!isNaN(columns[key].width)) {
                 targetWidth -= columns[key].width;
             } else if (columns[key].width.indexOf("%")) {
-                columns[key].width = Math.floor(_target.offsetWidth * Number(columns[key].width.replace("%", "").trim()) / 100);
+                columns[key].width = _target.offsetWidth * Number(columns[key].width.replace("%", "").trim()) / 100;
                 targetWidth -= columns[key].width;
             } else if (columns[key].width.indexOf("px")) {
                 columns[key].width = Number(columns[key].width.replace("px", "").trim()) / 100;
@@ -580,16 +632,20 @@
             return columns[key].width;
         });
 
-        let defaultColumnsWidth = Math.floor(targetWidth / (Object.keys(columns).length - existWidthColumns.length));
+        let defaultColumnsWidth = targetWidth / (Object.keys(columns).length - existWidthColumns.length);
 
         let notExistWidthColumns = Object.keys(columns).filter(function (key) {
             return !columns[key].width;
         });
 
         existWidthColumns.forEach(function (key) {
-            _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width + "px";
-            if (_target.querySelector("td[hn-table-column='" + key + "']")) {
-                _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+            if(columns[key].width) {
+                if(_target.querySelector("th[hn-table-column-key='" + key + "']")) {
+                    _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width + "px";
+                }
+                if (_target.querySelector("td[hn-table-column='" + key + "']")) {
+                    _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+                }
             }
         });
 
@@ -601,7 +657,19 @@
                 targetWidth -= defaultColumnsWidth;
             }
             _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width + "px";
-            _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+            if (_target.querySelector("td[hn-table-column='" + key + "']")) {
+                _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+            }
+        });
+
+        _target.querySelectorAll("th[hn-table-child-column-key]").forEach(function (el){
+            let pColumnWidth = _target.querySelector("th[hn-table-column-key='"+el.getAttribute("hn-table-parent-column-key")+"']").offsetWidth;
+            let childColumnLength = _target.querySelectorAll("th[hn-table-parent-column-key='"+el.getAttribute("hn-table-parent-column-key")+"']").length;;
+            let key = el.getAttribute("hn-table-child-column-key");
+            _target.querySelectorAll("td[hn-table-column='"+key+"']").forEach(function (cEl){
+                cEl.style.width = pColumnWidth/childColumnLength-3+"px";
+            });
+            el.style.width = pColumnWidth/childColumnLength+"px";
         });
 
         let hScroll = _target.offsetHeight < (_target.querySelector(".hn-table-bd").offsetHeight + _target.querySelector(".hn-table-hd").offsetHeight);
@@ -822,11 +890,9 @@
     }
 
     let _setPage = function () {
-        if (this) {
-            _config = this.config;
-            _target = this.config.target;
-        }
-
+        let _this = this;
+        let _config = _this.config;
+        let _target = _config.target;
         let data = [];
         let columns = _config.columns;
         let hnTableRows = [];
@@ -895,34 +961,34 @@
                         movePage(endPage + 1);
                     });
                 }
+            }
 
-                let movePage = function (page) {
-                    _target.setAttribute("page", page);
-                    let hnTableTbBd = _target.querySelector(".hn-table-bd");
+            let movePage = function (page) {
+                _target.setAttribute("page", page);
+                let hnTableTbBd = _target.querySelector(".hn-table-bd");
 
-                    hnTableTbBd.querySelectorAll(".hn-table-body").forEach(function (el) {
-                        el.remove();
-                    });
+                hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
+                    el.remove();
+                });
 
-                    let hnTableBody = document.createElement("tbody");
-                    hnTableBody.classList.add("hn-table-body");
-                    let hnTableRows = _setPage();
-                    hnTableRows.forEach(function (hnTableRow) {
-                        hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
-                    });
-                    hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+                let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
+                let hnTableRows = _this.setPage();
+                hnTableRows.forEach(function (hnTableRow) {
+                    hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
+                });
+                hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
 
-                    let hnTableTbHd = _target.querySelector(".hn-table-hd");
-                    _setColumnWidth(_target);
+                let hnTableTbHd = _target.querySelector(".hn-table-hd");
+                _this.setColumnWidth();
 
-                    if (!_config.colHeadFixed) {
-                        hnTableTbHd.style.position = "inherit";
-                    }
-                    if (_config.resizeable) {
-                        _resizeable(hnTableTbHd, hnTableTbBd);
-                    }
+                if (!_config.colHeadFixed) {
+                    hnTableTbHd.style.position = "inherit";
+                }
+                if (_config.resizeable) {
+                    _resizeable(hnTableTbHd, hnTableTbBd);
                 }
             }
+
             _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
         } else if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
             let _serverOption = _config.pageOption.serverOption;
@@ -1008,16 +1074,23 @@
                     _target.setAttribute("page", page);
                     let hnTableTbBd = _target.querySelector(".hn-table-bd");
 
-                    hnTableTbBd.querySelectorAll(".hn-table-body").forEach(function (el) {
+                    hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
                         el.remove();
                     });
 
-                    let hnTableBody = document.createElement("tbody");
+                    let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
                     hnTableBody.classList.add("hn-table-body");
 
                     let dataParam = {}
                     dataParam[startRowText] = (page-1)*perIdx;
                     dataParam[endRowText] = perIdx;
+
+                    if (_serverOption.data) {
+                        let optionParam = _serverOption.data();
+                        Object.keys(optionParam).forEach(function (key) {
+                            dataParam[key] = optionParam[key]
+                        });
+                    }
 
 
                     _rest({
@@ -1027,14 +1100,14 @@
                         type: "json"
                     }).then(function (result) {
                         _config.data = result;
-                        let hnTableRows = _setPage();
+                        let hnTableRows = _this.setPage();
                         hnTableRows.forEach(function (hnTableRow) {
                             hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
                         });
                         hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
 
                         let hnTableTbHd = _target.querySelector(".hn-table-hd");
-                        _setColumnWidth(_target);
+                        _this.setColumnWidth();
 
                         if (!_config.colHeadFixed) {
                             hnTableTbHd.style.position = "inherit";
@@ -1047,6 +1120,56 @@
             }
             _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
         }
+
+
+        let createCell = function (obj, column, key) {
+            let hnTableCell = document.createElement("td");
+            hnTableCell.classList.add("hn-table-cell");
+            hnTableCell.setAttribute("hn-table-column", key);
+            if (obj[key]) {
+                if (column && column.format && column.format == "locale") {
+                    hnTableCell.innerText = Number(obj[key]).toLocaleString();
+                } else if (column && column.format && typeof column.format == "function") {
+                    let r = column.format(obj[key], obj);
+                    if (r && typeof r != "function" && typeof r != "object") {
+                        hnTableCell.innerText = r;
+                    } else if (r && r instanceof Element) {
+                        hnTableCell.insertAdjacentElement("beforeend", r);
+                    } else {
+                        hnTableCell.innerText = "";
+                    }
+                } else {
+                    hnTableCell.innerText = obj[key];
+                }
+                if (column && column.textAlign) {
+                    hnTableCell.style.textAlign = column.textAlign;
+                }
+            } else {
+                if (column && column.format && typeof column.format == "function") {
+                    let r = column.format(obj[key], obj);
+                    if (r && typeof r != "function" && typeof r != "object") {
+                        hnTableCell.innerText = r;
+                    } else if (r && r instanceof Element) {
+                        hnTableCell.insertAdjacentElement("beforeend", r);
+                    } else {
+                        hnTableCell.innerText = "";
+                    }
+                } else {
+                    hnTableCell.innerText = obj[key];
+                }
+            }
+            if (column && column.cellEvent && _getObjType(column.cellEvent) == "map") {
+                Object.keys(column.cellEvent).forEach(function (eKey) {
+                    hnTableCell.addEventListener(eKey, function (e) {
+                        let r = column["cellEvent"][eKey](e, hnTableCell, obj[key], obj);
+                        if (typeof r == "boolean") {
+                            return r;
+                        }
+                    });
+                });
+            }
+            return hnTableCell;
+        }
         data.forEach(function (obj, idx) {
             let hnTableRow = document.createElement("tr");
             hnTableRow.classList.add("hn-table-row");
@@ -1056,49 +1179,17 @@
                 hnTableRow.setAttribute("hn-table-row-num", idx);
             }
 
-            Object.keys(columns).forEach(function (key) {
-                let hnTableCell = document.createElement("td");
-                hnTableCell.classList.add("hn-table-cell");
-                hnTableCell.setAttribute("hn-table-column", key);
-                if (obj[key]) {
-                    if (_config.columns[key] && _config.columns[key]["format"] && _config.columns[key]["format"] == "locale") {
-                        hnTableCell.innerText = Number(obj[key]).toLocaleString();
-                    } else if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
-                        let r = _config.columns[key]["format"](obj[key], obj);
-                        if (r && typeof r != "function" && typeof r != "object") {
-                            hnTableCell.innerText = r;
-                        } else {
-                            hnTableCell.innerText = "";
-                        }
-                    } else {
-                        hnTableCell.innerText = obj[key];
-                    }
-                    if (_config.columns[key] && _config.columns[key]["textAlign"]) {
-                        hnTableCell.style.textAlign = _config.columns[key]["textAlign"];
-                    }
-                } else {
-                    if (_config.columns[key] && _config.columns[key]["format"] && typeof _config.columns[key]["format"] == "function") {
-                        let r = _config.columns[key]["format"](obj[key], obj);
-                        if (r && typeof r != "function" && typeof r != "object") {
-                            hnTableCell.innerText = r;
-                        } else {
-                            hnTableCell.innerText = "";
-                        }
-                    } else {
-                        hnTableCell.innerText = obj[key];
-                    }
-                }
-                if (_config.columns[key] && _config.columns[key]["cellEvent"] && _getObjType(_config.columns[key]["cellEvent"]) == "map") {
-                    Object.keys(_config.columns[key]["cellEvent"]).forEach(function (eKey) {
-                        hnTableCell.addEventListener(eKey, function (e) {
-                            let r = _config.columns[key]["cellEvent"][eKey](e, hnTableCell, obj[key], obj);
-                            if (typeof r == "boolean") {
-                                return r;
-                            }
-                        });
+            Object.keys(_config.columns).forEach(function (key) {
+                let column = _config.columns[key];
+                if(column.childColumns) {
+                    Object.keys(column.childColumns).forEach(function (key) {
+                        let childColumn = column.childColumns[key];
+                        hnTableRow.insertAdjacentElement("beforeend", createCell(obj, childColumn, key));
                     });
+                } else {
+                    hnTableRow.insertAdjacentElement("beforeend", createCell(obj, column, key));
                 }
-                hnTableRow.insertAdjacentElement("beforeend", hnTableCell);
+
             });
             hnTableRows.push(hnTableRow);
         });
@@ -1129,8 +1220,19 @@
                 resizeLinePosX = e.pageX;
 
                 let columnKey = prevColumn.getAttribute("hn-table-column-key");
-                prevTd = tbodyTr.querySelector("[hn-table-column='" + columnKey + "']");
-                nextTd = prevTd.nextElementSibling;
+                if(_target.querySelector("[hn-table-parent-column-key]")) {
+                    let cTableHeads = _target.querySelectorAll("[hn-table-parent-column-key]");
+                    let cTableHeadsLength = cTableHeads.length;
+                    prevTd = [];
+                    cTableHeads.forEach(function (cTableHead) {
+                        let prevTdKey = cTableHead.getAttribute("hn-table-child-column-key");
+                        prevTd.push(tbodyTr.querySelector("[hn-table-column='" + prevTdKey + "']"));
+                    })
+                    nextTd = prevTd.nextElementSibling;
+                } else {
+                    prevTd = tbodyTr.querySelector("[hn-table-column='" + columnKey + "']");
+                    nextTd = prevTd.nextElementSibling;
+                }
 
                 let d = function (e) {
                     if ("border-box" == l(e, "box-sizing")) {
@@ -1154,7 +1256,13 @@
                     nextColumn && (nextColumn.style.width = ncSize - d + "px");
                     prevColumn.style.width = pcSize + d + "px";
                     nextTd && (nextTd.style.width = ncSize - d + "px");
-                    prevTd.style.width = pcSize + d + "px";
+                    if(prevTd.length) {
+                        prevTd.forEach(function (td){
+                            td.style.width = (pcSize + d - 3)/prevTd.length + "px";
+                        });
+                    } else {
+                        prevTd.style.width = pcSize + d + "px";
+                    }
                 }
             });
             document.addEventListener("mouseup", function () {

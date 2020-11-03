@@ -18,6 +18,7 @@
 .hn-table-pagination {
     width: 100%;
     height: 40px;
+    margin-top: 10px;
 }
 
 .hn-table-pagination ul {
@@ -50,8 +51,8 @@
     top: 0;
 }
 
-.hn-table-cell, .hn-table-head {
-    height: 28px;
+.hn-table-cell, .hn-table-head, .hn-table-child-head {
+    max-height: 28px;
     line-height: 28px;
     font-size: 12pt;
     border-bottom: 1px solid #d3d3d3;
@@ -61,7 +62,7 @@
     word-break: break-all;
 }
 
-.hn-table-head {
+.hn-table-head, .hn-table-child-head {
     border: 1px solid #000;
     border-top: 2px solid #3a63b3;
     background: #f3f8fe;

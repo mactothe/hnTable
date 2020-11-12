@@ -616,6 +616,7 @@
 
         existWidthColumns.forEach(function (key) {
             if (!isNaN(columns[key].width)) {
+                columns[key].width = columns[key].width;
                 targetWidth -= columns[key].width;
             } else if (columns[key].width.indexOf("%")) {
                 columns[key].width = _target.offsetWidth * Number(columns[key].width.replace("%", "").trim()) / 100;
@@ -664,7 +665,7 @@
 
         _target.querySelectorAll("th[hn-table-child-column-key]").forEach(function (el){
             let pColumnWidth = _target.querySelector("th[hn-table-column-key='"+el.getAttribute("hn-table-parent-column-key")+"']").offsetWidth;
-            let childColumnLength = _target.querySelectorAll("th[hn-table-parent-column-key='"+el.getAttribute("hn-table-parent-column-key")+"']").length;;
+            let childColumnLength = _target.querySelectorAll("th[hn-table-parent-column-key='"+el.getAttribute("hn-table-parent-column-key")+"']").length;
             let key = el.getAttribute("hn-table-child-column-key");
             _target.querySelectorAll("td[hn-table-column='"+key+"']").forEach(function (cEl){
                 cEl.style.width = pColumnWidth/childColumnLength-3+"px";
@@ -675,20 +676,29 @@
         let hScroll = _target.offsetHeight < (_target.querySelector(".hn-table-bd").offsetHeight + _target.querySelector(".hn-table-hd").offsetHeight);
 
         let correctionVal = -17;
-        _target.querySelectorAll("tr > th:last-child").forEach(function (el) {
-            let correctionSize = _target.querySelector(".hn-table-cover").offsetWidth - _target.querySelector(".hn-table-hd").offsetWidth;
-            if (hScroll) {
-                correctionSize += correctionVal;
-            }
-            el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
-        });
-        _target.querySelectorAll("tr > td:last-child").forEach(function (el) {
-            let correctionSize = _target.querySelector(".hn-table-cover").offsetWidth - _target.querySelector(".hn-table-bd").offsetWidth;
-            if (hScroll) {
-                correctionSize += correctionVal;
-            }
-            el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
-        });
+        if (notExistWidthColumns.length > 0) {
+            _target.querySelectorAll("tr > th:last-child").forEach(function (el) {
+                let correctionSize = _target.querySelector(".hn-table-cover").offsetWidth - _target.querySelector(".hn-table-hd").offsetWidth;
+                if (hScroll) {
+                    correctionSize += correctionVal;
+                }
+                el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
+            });
+            _target.querySelectorAll("tr > td:last-child").forEach(function (el) {
+                let correctionSize = _target.querySelector(".hn-table-cover").offsetWidth - _target.querySelector(".hn-table-bd").offsetWidth;
+                if (hScroll) {
+                    correctionSize += correctionVal;
+                }
+                el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
+            });
+        } else {
+            _target.querySelectorAll("tr > th:last-child").forEach(function (el) {
+                el.style.width = Number(el.style.width.replace("px", "")) + correctionVal + "px";
+            });
+            _target.querySelectorAll("tr > td:last-child").forEach(function (el) {
+                el.style.width = Number(el.style.width.replace("px", "")) + correctionVal + "px";
+            });
+        }
     }
 
     let _getColumnData = function () {
@@ -979,7 +989,6 @@
                 hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
 
                 let hnTableTbHd = _target.querySelector(".hn-table-hd");
-                _this.setColumnWidth();
 
                 if (!_config.colHeadFixed) {
                     hnTableTbHd.style.position = "inherit";
@@ -987,6 +996,7 @@
                 if (_config.resizeable) {
                     _resizeable(hnTableTbHd, hnTableTbBd);
                 }
+                _this.setColumnWidth();
             }
 
             _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
@@ -1071,19 +1081,12 @@
                 }
 
                 let movePage = function (page) {
-                    _target.setAttribute("page", page);
-                    let hnTableTbBd = _target.querySelector(".hn-table-bd");
-
-                    hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
-                        el.remove();
-                    });
-
-                    let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
-                    hnTableBody.classList.add("hn-table-body");
 
                     let dataParam = {}
                     dataParam[startRowText] = (page-1)*perIdx;
                     dataParam[endRowText] = perIdx;
+
+                    _target.setAttribute("page", page);
 
                     if (_serverOption.data) {
                         let optionParam = _serverOption.data();
@@ -1101,13 +1104,19 @@
                     }).then(function (result) {
                         _config.data = result;
                         let hnTableRows = _this.setPage();
+                        let hnTableTbBd = _target.querySelector(".hn-table-bd");
+                        hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
+                            el.remove();
+                        });
+
+                        let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
+                        hnTableBody.classList.add("hn-table-body");
                         hnTableRows.forEach(function (hnTableRow) {
                             hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
                         });
                         hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
 
                         let hnTableTbHd = _target.querySelector(".hn-table-hd");
-                        _this.setColumnWidth();
 
                         if (!_config.colHeadFixed) {
                             hnTableTbHd.style.position = "inherit";
@@ -1115,6 +1124,7 @@
                         if (_config.resizeable) {
                             _resizeable(hnTableTbHd, hnTableTbBd);
                         }
+                        _this.setColumnWidth();
                     })
                 }
             }

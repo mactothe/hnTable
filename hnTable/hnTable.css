@@ -1,5 +1,5 @@
 @charset "utf-8";
-.hn-table-wrap * {-ms-user-select: none;-moz-user-select: -moz-none;-webkit-user-select: none;-khtml-user-select: none;user-select:none;box-sizing: content-box;}
+.hn-table-wrap * {-ms-user-select: none;-moz-user-select: -moz-none;-webkit-user-select: none;-khtml-user-select: none;user-select:none;box-sizing: border-box;}
 
 .hn-table-wrap {
     overflow: hidden;
@@ -87,8 +87,7 @@
 }
 
 .hn-table-empty {
-    height: 20px;
-    width: calc(100% - 20px);
+    height: 40px;
     padding: 10px;
     line-height: 20px;
     font-size: 12pt;
@@ -97,7 +96,7 @@
     color: #888;
 }
 
-.hn-table-modal-overlay * {-ms-user-select: none;-moz-user-select: -moz-none;-webkit-user-select: none;-khtml-user-select: none;user-select:none;box-sizing: content-box;}
+.hn-table-modal-overlay * {-ms-user-select: none;-moz-user-select: -moz-none;-webkit-user-select: none;-khtml-user-select: none;user-select:none;box-sizing: border-box;}
 
 .hn-table-modal-overlay {
     position: fixed;

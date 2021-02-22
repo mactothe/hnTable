@@ -116,8 +116,6 @@
         this.getRowData = _getRowData;
         this.getCellData = _getCellData;
         this.initTable = _initTable;
-        this.setPage = _setPage;
-        this.setColumnWidth = _setColumnWidth;
 
         let instance = {
             instance: this,
@@ -394,14 +392,21 @@
         _instance.push(instance);
     };
 
-    let _initTable = function () {
+    let _initTable = function (options) {
         let _this = this;
         let _config = _this.config;
+        if (options) {
+            Object.keys(options).forEach(function (key) {
+                if (_config[key]) {
+                    _config[key] = options[key];
+                }
+            });
+        }
         let _target = _this.config.target;
         let columns = _this.config.columns;
         let data = _this.config.data;
 
-        if(_this.config && _this.config.pageOption && _this.config.pageOption.type == "server") {
+        if (_this.config && _this.config.pageOption && _this.config.pageOption.type == "server") {
             data = [];
         }
 
@@ -436,6 +441,9 @@
         let hnTableTbHd = document.createElement("table");
         hnTableTbHd.classList.add("hn-table-hd");
 
+        let hnTableCg = document.createElement("colgroup");
+        hnTableCg.classList.add("hn-table-cg");
+
         let hnTableHeader = document.createElement("thead");
         hnTableHeader.classList.add("hn-table-header");
 
@@ -445,75 +453,105 @@
 
 
         let childColumnsUsed = false;
-        Object.keys(columns).forEach(function (key) {
-            if(columns[key].childColumns) {
-                childColumnsUsed = true;
+        if (Object.keys(columns).length > 0) {
+            Object.keys(columns).forEach(function (key) {
+                if (columns[key].childColumns) {
+                    childColumnsUsed = true;
+                }
+            });
+        } else {
+            if (data && data[0]) {
+                Object.keys(data[0]).forEach(function (key) {
+                    if (data[0][key] && _getObjType(data[0][key]) == "map") {
+                        childColumnsUsed = true;
+                    }
+                });
             }
-        });
+        }
 
         let hnTableHeaderChildRow;
 
-        if(childColumnsUsed) {
+        if (childColumnsUsed) {
             hnTableHeaderChildRow = document.createElement("tr");
             hnTableHeaderChildRow.classList.add("hn-table-child-row");
             hnTableHeader.insertAdjacentElement("beforeend", hnTableHeaderChildRow);
         }
 
-        if (Object.keys(columns).length > 0) {
-            Object.keys(columns).forEach(function (key) {
-                let markText = key;
-                if (columns[key].markText) {
-                    markText = columns[key].markText;
-                }
-                let hnTableHead = document.createElement("th");
-                if(!columns[key].childColumns && childColumnsUsed) {
-                    hnTableHead.rowSpan = 2;
-                }
-                if(columns[key].childColumns){
-                    let childColumns = columns[key].childColumns;
-                    let pKey = key;
-                    hnTableHead.colSpan = Object.keys(childColumns).length;
-                        Object.keys(childColumns).forEach(function (key) {
-                        let childColumnMarkText = key;
-                        if (childColumns[key].markText) {
-                            childColumnMarkText = childColumns[key].markText;
-                        }
-                        let hnTableHeadChild = document.createElement("th");
-                        hnTableHeadChild.classList.add("hn-table-child-head");
-                        hnTableHeadChild.setAttribute("hn-table-parent-column-key", pKey);
-                        hnTableHeadChild.setAttribute("hn-table-child-column-key", key);
-                        hnTableHeadChild.innerText = childColumnMarkText;
-                        hnTableHeaderChildRow.insertAdjacentElement("beforeend", hnTableHeadChild);
-                    });
-                }
-                hnTableHead.classList.add("hn-table-head");
-                hnTableHead.setAttribute("hn-table-column-key", key);
-                hnTableHead.innerText = markText;
-                hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
-            });
-
-        } else {
+        /**
+         * columns에 대한 정의가 없을 경우 data를 기준으로 columns를 정의한다.
+         */
+        if (Object.keys(columns).length == 0) {
+            columns = {};
             if (data.length > 0) {
-                columns = {};
                 Object.keys(data[0]).forEach(function (key) {
                     columns[key] = {};
-                    let markText = key;
-                    let hnTableHead = document.createElement("th");
-                    hnTableHead.classList.add("hn-table-head");
-                    hnTableHead.setAttribute("hn-table-column-key", key);
-                    hnTableHead.innerText = markText;
-                    hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
+                    /**
+                     * 데이터의 컬럼에 dict형의 데이터가 존재할 경우 자식컬럼으로 인지하고 자식컬럼을 생성한다.
+                     */
+                    if (data[0][key] && _getObjType(data[0][key]) == "map") {
+                        columns[key].childColumns = {}
+                        Object.keys(data[0][key]).forEach(function (childKey) {
+                            columns[key].childColumns[childKey] = {};
+                        });
+                    }
                 });
             } else {
                 throw new Error(_getErrorMsg("0002"));
             }
             _config.columns = columns;
         }
+
+        Object.keys(columns).forEach(function (key) {
+            let markText = key;
+            if (columns[key].markText) {
+                markText = columns[key].markText;
+            }
+
+            let hnTableHead = document.createElement("th");
+            hnTableHead.classList.add("hn-table-head");
+            hnTableHead.setAttribute("hn-table-column-key", key);
+            hnTableHead.innerText = markText;
+            hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
+
+            if (!columns[key].childColumns && childColumnsUsed) {
+                hnTableHead.rowSpan = 2;
+            }
+            if (columns[key].childColumns) {
+                let childColumns = columns[key].childColumns;
+                let pKey = key;
+                hnTableHead.colSpan = Object.keys(childColumns).length;
+                Object.keys(childColumns).forEach(function (key) {
+                    let childColumnMarkText = key;
+                    if (childColumns[key].markText) {
+                        childColumnMarkText = childColumns[key].markText;
+                    }
+                    let hnTableHeadChild = document.createElement("th");
+                    hnTableHeadChild.classList.add("hn-table-child-head");
+                    hnTableHeadChild.setAttribute("hn-table-parent-column-key", pKey);
+                    hnTableHeadChild.setAttribute("hn-table-child-column-key", key);
+                    hnTableHeadChild.innerText = childColumnMarkText;
+                    hnTableHeaderChildRow.insertAdjacentElement("beforeend", hnTableHeadChild);
+
+                    let hnTableCgCol = document.createElement("col");
+                    hnTableCgCol.classList.add("hn-table-child-head-col");
+                    hnTableCgCol.setAttribute("hn-table-parent-column-key", pKey);
+                    hnTableCgCol.setAttribute("hn-table-child-column-key", key);
+                    hnTableCg.insertAdjacentElement("beforeend", hnTableCgCol);
+                });
+            } else {
+                let hnTableCgCol = document.createElement("col");
+                hnTableCgCol.classList.add("hn-table-head-col");
+                hnTableCgCol.setAttribute("hn-table-column-key", key);
+                hnTableCg.insertAdjacentElement("beforeend", hnTableCgCol);
+            }
+        });
+        hnTableTbHd.insertAdjacentElement("beforeend", hnTableCg.cloneNode(true));
         hnTableTbHd.insertAdjacentElement("beforeend", hnTableHeader);
 
 
         let hnTableTbBd = document.createElement("table");
         hnTableTbBd.classList.add("hn-table-bd");
+        hnTableTbBd.insertAdjacentElement("beforeend", hnTableCg.cloneNode(true));
 
         hnTableCover.insertAdjacentElement("beforeend", hnTableTbHd);
         hnTableCover.insertAdjacentElement("beforeend", hnTableTbBd);
@@ -541,20 +579,20 @@
             } else {
                 let hnTableBody = document.createElement("tbody");
                 hnTableBody.classList.add("hn-table-body");
-                let hnTableRows = _this.setPage();
+                let hnTableRows = _setPage(_this.config);
                 hnTableRows.forEach(function (hnTableRow) {
                     hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
                 });
                 hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
             }
 
-            _this.setColumnWidth(_target);
+            _setColumnWidth(_this.config);
 
             if (!_config.colHeadFixed) {
                 hnTableTbHd.style.position = "inherit";
             }
             if (_config.resizeable) {
-                _resizeable(hnTableTbHd, hnTableTbBd);
+                _resizeable(_target);
             }
         }
 
@@ -576,13 +614,13 @@
                             let page = _target.getAttribute("page");
                             let startRowNum = _serverOption.mapping.startRow ? _serverOption.mapping.startRow : "startRow";
                             let endRowNum = _serverOption.mapping.endRow ? _serverOption.mapping.endRow : "endRow";
-                            dataParam[startRowNum] = page==1?0:_perIdx*page-_perIdx;
+                            dataParam[startRowNum] = page == 1 ? 0 : _perIdx * page - _perIdx;
                             dataParam[endRowNum] = _perIdx;
                         }
                         if (_serverOption.data) {
                             let optionParam = _serverOption.data();
                             Object.keys(optionParam).forEach(function (key) {
-                               dataParam[key] = optionParam[key]
+                                dataParam[key] = optionParam[key]
                             });
                         }
                         _rest({
@@ -604,101 +642,82 @@
         }
     }
 
-    let _setColumnWidth = function () {
-        let _this = this;
-        let _target = _this.config.target;
+    /**
+     * 컬럼 넓이를 지정해주는 함수
+     * @private
+     */
+    let _setColumnWidth = function (config) {
+        let _target = config.target;
 
         let targetWidth = _target.offsetWidth;
-        let columns = _this.config.columns;
-        let existWidthColumns = Object.keys(columns).filter(function (key) {
-            return columns[key].width;
-        });
+        let columns = config.columns;
 
-        existWidthColumns.forEach(function (key) {
-            if (!isNaN(columns[key].width)) {
-                columns[key].width = columns[key].width;
-                targetWidth -= columns[key].width;
-            } else if (columns[key].width.indexOf("%")) {
-                columns[key].width = _target.offsetWidth * Number(columns[key].width.replace("%", "").trim()) / 100;
-                targetWidth -= columns[key].width;
-            } else if (columns[key].width.indexOf("px")) {
-                columns[key].width = Number(columns[key].width.replace("px", "").trim()) / 100;
-                targetWidth -= columns[key].width;
+        let columnsWidth = {};
+
+        /**
+         * 컬럼 넓이에 대한 정의
+         * 컬럼의 자식컬럼이 있을 경우 부모 컬럼에 대한 정의는 하지 않는다.
+         */
+        Object.keys(columns).forEach(function (key) {
+            if (columns[key].childColumns) {
+                Object.keys(columns[key].childColumns).forEach(function (cKey) {
+                    columnsWidth[key + "." + cKey] = {};
+                    let column = columns[key].childColumns[cKey];
+                    columnsWidth[key + "." + cKey].width = column.width ? column.width : null;
+                });
             } else {
-                delete columns[key].width;
+                columnsWidth[key] = {};
+                columnsWidth[key].width = columns[key].width ? columns[key].width : null;
             }
         });
 
-        existWidthColumns = Object.keys(columns).filter(function (key) {
-            return columns[key].width;
-        });
-
-        let defaultColumnsWidth = targetWidth / (Object.keys(columns).length - existWidthColumns.length);
-
-        let notExistWidthColumns = Object.keys(columns).filter(function (key) {
-            return !columns[key].width;
-        });
-
-        existWidthColumns.forEach(function (key) {
-            if(columns[key].width) {
-                if(_target.querySelector("th[hn-table-column-key='" + key + "']")) {
-                    _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width + "px";
-                }
-                if (_target.querySelector("td[hn-table-column='" + key + "']")) {
-                    _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+        /**
+         * 1. 컬럼 넓이가 숫자로 되어있는지 확인
+         * : 숫자일 경우 그대로 반영
+         * 2. 컬럼 넓이가 퍼센트로 되어있는지 확인
+         * : 컬럼 넓이가 퍼센트 단위일 경우 테이블의 넓이와 비교하여 해당 컬럼의 넓이를 픽셀로 변경해준다.
+         * 3. 컬럼 넓이에 px이 붙어있는지 확인
+         * : px이 붙어 있을경우 px를 지우고 숫자로 변경
+         *
+         * 컬럼의 넓이가 지정되어있지 않은 컬럼에 대한 예외처리를 위해서.
+         * 컬럼 넓이가 지정되어있을 경우 테이블의 총 넓이에서 해당 넓이 만큼을 제외한다.
+         */
+        Object.keys(columnsWidth).forEach(function (key) {
+            if (columnsWidth[key].width) {
+                if (!isNaN(columnsWidth[key].width)) {
+                    columnsWidth[key].width = columnsWidth[key].width;
+                    targetWidth -= columnsWidth[key].width;
+                } else if (columnsWidth[key].width.indexOf("%")) {
+                    columnsWidth[key].width = _target.offsetWidth * Number(columnsWidth[key].width.replace("%", "").trim()) / 100;
+                    targetWidth -= columnsWidth[key].width;
+                } else if (columnsWidth[key].indexOf("px")) {
+                    columnsWidth[key].width = Number(columnsWidth[key].width.replace("px", "").trim()) / 100;
+                    targetWidth -= columnsWidth[key].width;
                 }
             }
         });
 
-        notExistWidthColumns.forEach(function (key, idx) {
-            if (notExistWidthColumns.length - 1 == idx) {
-                columns[key].width = targetWidth;
+        /**
+         * 총 컬럼의 갯수에 컬럼의 넓이가 지정되어있는 컬럼의 갯수를 제외하여 컬럼의 넓이가 지정되어있지 않은 컬럼에 넓이를 정의
+         */
+        let defaultColumnsWidth = Math.floor(targetWidth / Object.keys(columnsWidth).filter(function (key) {
+            return !(columnsWidth[key] && columnsWidth[key].width)
+        }).length) - 1;
+
+        Object.keys(columnsWidth).forEach(function (key) {
+            if (key.split(".").length > 1) {
+                let parentKey = key.split(".")[0]
+                let childKey = key.split(".")[1]
+                _target.querySelectorAll("col[hn-table-parent-column-key='" + parentKey + "'][hn-table-child-column-key='" + childKey + "']").forEach(function (colEl) {
+                    colEl.width = columnsWidth[key].width ? columnsWidth[key].width : defaultColumnsWidth;
+                })
             } else {
-                columns[key].width = defaultColumnsWidth;
-                targetWidth -= defaultColumnsWidth;
-            }
-            _target.querySelector("th[hn-table-column-key='" + key + "']").style.width = columns[key].width + "px";
-            if (_target.querySelector("td[hn-table-column='" + key + "']")) {
-                _target.querySelector("td[hn-table-column='" + key + "']").style.width = columns[key].width + "px";
+                _target.querySelectorAll("col[hn-table-column-key='" + key + "']").forEach(function (colEl) {
+                    colEl.width = columnsWidth[key].width ? columnsWidth[key].width : defaultColumnsWidth;
+                })
             }
         });
 
-        _target.querySelectorAll("th[hn-table-child-column-key]").forEach(function (el){
-            let pColumnWidth = _target.querySelector("th[hn-table-column-key='"+el.getAttribute("hn-table-parent-column-key")+"']").offsetWidth;
-            let childColumnLength = _target.querySelectorAll("th[hn-table-parent-column-key='"+el.getAttribute("hn-table-parent-column-key")+"']").length;
-            let key = el.getAttribute("hn-table-child-column-key");
-            _target.querySelectorAll("td[hn-table-column='"+key+"']").forEach(function (cEl){
-                cEl.style.width = pColumnWidth/childColumnLength-3+"px";
-            });
-            el.style.width = pColumnWidth/childColumnLength+"px";
-        });
-
-        let hScroll = _target.offsetHeight < (_target.querySelector(".hn-table-bd").offsetHeight + _target.querySelector(".hn-table-hd").offsetHeight);
-
-        let correctionVal = -17;
-        if (notExistWidthColumns.length > 0) {
-            _target.querySelectorAll("tr > th:last-child").forEach(function (el) {
-                let correctionSize = _target.querySelector(".hn-table-cover").offsetWidth - _target.querySelector(".hn-table-hd").offsetWidth;
-                if (hScroll) {
-                    correctionSize += correctionVal;
-                }
-                el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
-            });
-            _target.querySelectorAll("tr > td:last-child").forEach(function (el) {
-                let correctionSize = _target.querySelector(".hn-table-cover").offsetWidth - _target.querySelector(".hn-table-bd").offsetWidth;
-                if (hScroll) {
-                    correctionSize += correctionVal;
-                }
-                el.style.width = Number(el.style.width.replace("px", "")) - (_target.offsetWidth - _target.clientWidth) + correctionSize + "px";
-            });
-        } else {
-            _target.querySelectorAll("tr > th:last-child").forEach(function (el) {
-                el.style.width = Number(el.style.width.replace("px", "")) + correctionVal + "px";
-            });
-            _target.querySelectorAll("tr > td:last-child").forEach(function (el) {
-                el.style.width = Number(el.style.width.replace("px", "")) + correctionVal + "px";
-            });
-        }
     }
 
     let _getColumnData = function () {
@@ -800,7 +819,7 @@
         let contentType = option.contentType ? option.contentType : "application/x-www-form-urlencoded; charset=UTF-8";
         let progress = typeof option.progress == "boolean" ? option.progress : false;
         let async = option.async && option.async == false ? option.async : true;
-        let xcsrf = option.xcsrf == true ? true : false;
+        let xcsrf = option.xcsrf;
         if (progress) {
             hnTable.showLoading();
         }
@@ -808,9 +827,9 @@
             const xhr = new XMLHttpRequest();
             xhr.open(method, url, async);
             xhr.setRequestHeader("Content-Type", contentType);
-            if (xcsrf && _self.getCsrf().token) {
+            if (xcsrf) {
                 xhr.setRequestHeader("Content-Encoding", "gzip");
-                xhr.setRequestHeader("X-CSRF-TOKEN", _self.getCsrf().token);
+                xhr.setRequestHeader(xcsrf.key, xcsrf.value);
                 xhr.setRequestHeader("AJAX", true);
             }
             if (option.requestHeader) {
@@ -822,7 +841,11 @@
                 if (xhr.status == 200) {
                     let response = xhr.response;
                     if (option.type && option.type.toLowerCase() == "json") {
-                        resolve(JSON.parse(response));
+                        if (typeof response == "string") {
+                            resolve(JSON.parse(response));
+                        } else {
+                            resolve(response);
+                        }
                     } else if (option.type && option.type.toLowerCase() == "blob") {
                         let reader = new FileReader();
                         reader.onloadend = function () {
@@ -899,9 +922,8 @@
         })
     }
 
-    let _setPage = function () {
-        let _this = this;
-        let _config = _this.config;
+    let _setPage = function (config) {
+        let _config = config;
         let _target = _config.target;
         let data = [];
         let columns = _config.columns;
@@ -982,7 +1004,7 @@
                 });
 
                 let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
-                let hnTableRows = _this.setPage();
+                let hnTableRows = _setPage(_config);
                 hnTableRows.forEach(function (hnTableRow) {
                     hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
                 });
@@ -993,21 +1015,17 @@
                 if (!_config.colHeadFixed) {
                     hnTableTbHd.style.position = "inherit";
                 }
-                if (_config.resizeable) {
-                    _resizeable(hnTableTbHd, hnTableTbBd);
-                }
-                _this.setColumnWidth();
             }
 
             _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
         } else if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
             let _serverOption = _config.pageOption.serverOption;
-            let totalRowText = (_serverOption&&_serverOption.mapping&&_serverOption.mapping.totalRow)?(_serverOption&&_serverOption.mapping&&_serverOption.mapping.totalRow):"totalRow";
-            let startRowText = (_serverOption&&_serverOption.mapping&&_serverOption.mapping.startRow)?(_serverOption&&_serverOption.mapping&&_serverOption.mapping.startRow):"startRow";
-            let endRowText = (_serverOption&&_serverOption.mapping&&_serverOption.mapping.endRow)?(_serverOption&&_serverOption.mapping&&_serverOption.mapping.endRow):"endRow";
+            let totalRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.totalRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.totalRow) : "totalRow";
+            let startRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.startRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.startRow) : "startRow";
+            let endRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.endRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.endRow) : "endRow";
             let url = "";
-            let method = _serverOption && _serverOption.method?_serverOption.method:"get";
-            if(_serverOption&&_serverOption.url) {
+            let method = _serverOption && _serverOption.method ? _serverOption.method : "get";
+            if (_serverOption && _serverOption.url) {
                 url = _serverOption.url;
             } else {
                 throw new Error(_getErrorMsg("0009"));
@@ -1020,7 +1038,7 @@
             let curPage = Number(_target.getAttribute("page"));
             let totalPage = 1;
             let totalRow = 1;
-            if(_data && _data[0] && _data[0][totalRowText]) {
+            if (_data && _data[0] && _data[0][totalRowText]) {
                 totalRow = _data[0][totalRowText];
                 totalPage = (totalRow % perIdx) == 0 ? totalRow / perIdx : Math.floor(totalRow / perIdx) + 1;
             }
@@ -1033,10 +1051,10 @@
 
             let startIdx = (curPage - 1) * perIdx
 
-            for(let i=0; i<_data.length; i++){
+            for (let i = 0; i < _data.length; i++) {
                 _data[i].idx = startIdx;
                 data.push(_data[i]);
-                startIdx ++;
+                startIdx++;
 
             }
 
@@ -1083,7 +1101,7 @@
                 let movePage = function (page) {
 
                     let dataParam = {}
-                    dataParam[startRowText] = (page-1)*perIdx;
+                    dataParam[startRowText] = (page - 1) * perIdx;
                     dataParam[endRowText] = perIdx;
 
                     _target.setAttribute("page", page);
@@ -1103,7 +1121,7 @@
                         type: "json"
                     }).then(function (result) {
                         _config.data = result;
-                        let hnTableRows = _this.setPage();
+                        let hnTableRows = _setPage(_config);
                         let hnTableTbBd = _target.querySelector(".hn-table-bd");
                         hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
                             el.remove();
@@ -1115,16 +1133,6 @@
                             hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
                         });
                         hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
-
-                        let hnTableTbHd = _target.querySelector(".hn-table-hd");
-
-                        if (!_config.colHeadFixed) {
-                            hnTableTbHd.style.position = "inherit";
-                        }
-                        if (_config.resizeable) {
-                            _resizeable(hnTableTbHd, hnTableTbBd);
-                        }
-                        _this.setColumnWidth();
                     })
                 }
             }
@@ -1132,11 +1140,14 @@
         }
 
 
-        let createCell = function (obj, column, key) {
+        let createCell = function (obj, column, key, parentKey) {
             let hnTableCell = document.createElement("td");
             hnTableCell.classList.add("hn-table-cell");
             hnTableCell.setAttribute("hn-table-column", key);
-            if (obj[key]) {
+            if (parentKey) {
+                hnTableCell.setAttribute("hn-table-parent-column", parentKey);
+            }
+            if (obj && obj[key]) {
                 if (column && column.format && column.format == "locale") {
                     hnTableCell.innerText = Number(obj[key]).toLocaleString();
                 } else if (column && column.format && typeof column.format == "function") {
@@ -1154,7 +1165,7 @@
                 if (column && column.textAlign) {
                     hnTableCell.style.textAlign = column.textAlign;
                 }
-            } else {
+            } else if (obj) {
                 if (column && column.format && typeof column.format == "function") {
                     let r = column.format(obj[key], obj);
                     if (r && typeof r != "function" && typeof r != "object") {
@@ -1171,7 +1182,7 @@
             if (column && column.cellEvent && _getObjType(column.cellEvent) == "map") {
                 Object.keys(column.cellEvent).forEach(function (eKey) {
                     hnTableCell.addEventListener(eKey, function (e) {
-                        let r = column["cellEvent"][eKey](e, hnTableCell, obj[key], obj);
+                        let r = column["cellEvent"][eKey](e, hnTableCell, obj && obj[key] ? obj[key] : "", obj);
                         if (typeof r == "boolean") {
                             return r;
                         }
@@ -1191,15 +1202,14 @@
 
             Object.keys(_config.columns).forEach(function (key) {
                 let column = _config.columns[key];
-                if(column.childColumns) {
-                    Object.keys(column.childColumns).forEach(function (key) {
-                        let childColumn = column.childColumns[key];
-                        hnTableRow.insertAdjacentElement("beforeend", createCell(obj, childColumn, key));
+                if (column.childColumns) {
+                    Object.keys(column.childColumns).forEach(function (childKey) {
+                        let childColumn = column.childColumns[childKey];
+                        hnTableRow.insertAdjacentElement("beforeend", createCell(obj[key], childColumn, childKey, key));
                     });
                 } else {
                     hnTableRow.insertAdjacentElement("beforeend", createCell(obj, column, key));
                 }
-
             });
             hnTableRows.push(hnTableRow);
         });
@@ -1207,52 +1217,38 @@
         return hnTableRows;
     }
 
-    let _resizeable = function (thead, tbody) {
-        let theadTr = thead.getElementsByTagName("tr")[0];
-        let th = theadTr ? theadTr.children : void 0;
-        let tbodyTr = tbody.getElementsByTagName("tr")[0];
-        if (th) {
-            for (let i = 0; i < th.length; i++) {
+    /**
+     * 리사이즈 옵션이 있을 경우 해당 함수를 통해 테이블 컬럼의 넓이를 변경할 수 있다.
+     * @param target
+     * @private
+     */
+    let _resizeable = function (target) {
+
+        target.querySelectorAll(".hn-table-hd > .hn-table-cg > col").forEach(function (colEl) {
+            let columnKey = colEl.getAttribute("hn-table-column-key");
+            let parentColumnKey = colEl.getAttribute("hn-table-parent-column-key");
+            let childColumnKey = colEl.getAttribute("hn-table-child-column-key");
+            let th = columnKey ? target.querySelector(".hn-table-header th[hn-table-column-key='" + columnKey + "']") : target.querySelector(".hn-table-header th[hn-table-parent-column-key='" + parentColumnKey + "'][hn-table-child-column-key='" + childColumnKey + "']");
+            if (th) {
                 let resizeLine = makeResizeLine(100);
-                th[i].appendChild(resizeLine);
-                th[i].style.position = 'relative';
-                resizeControll(resizeLine);
+                th.appendChild(resizeLine);
+                th.style.position = 'relative';
+                resizeControl(resizeLine);
             }
-        }
+        });
 
-        function resizeControll(resizeLine) {
-            //let t, n, i, o, r
-            let resizeLinePosX, prevColumn, nextColumn, pcSize, ncSize;
-            let prevTd, nextTd;
+        function resizeControl(resizeLine) {
+            let prevCol, nextCol, resizeLinePosX, pcSize, ncSize;
             resizeLine.addEventListener("mousedown", function (e) {
-                prevColumn = e.target.parentElement;
-                nextColumn = prevColumn.nextElementSibling;
                 resizeLinePosX = e.pageX;
-
+                let prevColumn = e.target.parentElement;
                 let columnKey = prevColumn.getAttribute("hn-table-column-key");
-                if(_target.querySelector("[hn-table-parent-column-key]")) {
-                    let cTableHeads = _target.querySelectorAll("[hn-table-parent-column-key]");
-                    let cTableHeadsLength = cTableHeads.length;
-                    prevTd = [];
-                    cTableHeads.forEach(function (cTableHead) {
-                        let prevTdKey = cTableHead.getAttribute("hn-table-child-column-key");
-                        prevTd.push(tbodyTr.querySelector("[hn-table-column='" + prevTdKey + "']"));
-                    })
-                    nextTd = prevTd.nextElementSibling;
-                } else {
-                    prevTd = tbodyTr.querySelector("[hn-table-column='" + columnKey + "']");
-                    nextTd = prevTd.nextElementSibling;
-                }
-
-                let d = function (e) {
-                    if ("border-box" == l(e, "box-sizing")) {
-                        return 0;
-                    }
-                    let t = l(e, "padding-left"),
-                        n = l(e, "padding-right");
-                    return parseInt(t) + parseInt(n);
-                }(prevColumn);
-                pcSize = prevColumn.offsetWidth - d, nextColumn && (ncSize = nextColumn.offsetWidth - d);
+                let parentColumnKey = prevColumn.getAttribute("hn-table-parent-column-key");
+                let childColumnKey = prevColumn.getAttribute("hn-table-child-column-key");
+                prevCol = columnKey ? target.querySelector(".hn-table-hd col[hn-table-column-key='" + columnKey + "']") : target.querySelector(".hn-table-hd col[hn-table-parent-column-key='" + parentColumnKey + "'][hn-table-child-column-key='" + childColumnKey + "']");
+                nextCol = prevCol.nextElementSibling;
+                pcSize = prevCol ? Number(prevCol.width) : null;
+                ncSize = nextCol ? Number(nextCol.width) : null;
             });
             resizeLine.addEventListener("mouseover", function (e) {
                 e.target.style.borderRight = "2px solid #0000ff";
@@ -1261,39 +1257,37 @@
                 e.target.style.borderRight = "";
             });
             document.addEventListener("mousemove", function (e) {
-                if (prevColumn) {
+                if (prevCol) {
                     let d = e.pageX - resizeLinePosX;
-                    nextColumn && (nextColumn.style.width = ncSize - d + "px");
-                    prevColumn.style.width = pcSize + d + "px";
-                    nextTd && (nextTd.style.width = ncSize - d + "px");
-                    if(prevTd.length) {
-                        prevTd.forEach(function (td){
-                            td.style.width = (pcSize + d - 3)/prevTd.length + "px";
-                        });
-                    } else {
-                        prevTd.style.width = pcSize + d + "px";
-                    }
+                    let prevColumnKey = prevCol.getAttribute("hn-table-column-key");
+                    let prevParentColumnKey = prevCol.getAttribute("hn-table-parent-column-key");
+                    let prevChildColumnKey = prevCol.getAttribute("hn-table-child-column-key");
+                    let nextColumnKey = nextCol && nextCol.getAttribute("hn-table-column-key");
+                    let nextParentColumnKey = nextCol && nextCol.getAttribute("hn-table-parent-column-key");
+                    let nextChildColumnKey = nextCol && nextCol.getAttribute("hn-table-child-column-key");
+                    prevCol.width = pcSize + d;
+                    nextCol && (nextCol.width = ncSize - d);
+                    let prevTbodyCol = prevColumnKey ? target.querySelector(".hn-table-bd col[hn-table-column-key='" + prevColumnKey + "']") : target.querySelector(".hn-table-bd col[hn-table-parent-column-key='" + prevParentColumnKey + "'][hn-table-child-column-key='" + prevChildColumnKey + "']");
+                    let nextTbodyCol = nextColumnKey ? target.querySelector(".hn-table-bd col[hn-table-column-key='" + nextColumnKey + "']") : target.querySelector(".hn-table-bd col[hn-table-parent-column-key='" + nextParentColumnKey + "'][hn-table-child-column-key='" + nextChildColumnKey + "']");
+                    prevTbodyCol.width = pcSize + d;
+                    nextTbodyCol && (nextTbodyCol.width = ncSize - d);
                 }
             });
             document.addEventListener("mouseup", function () {
-                resizeLinePosX = void 0, prevColumn = void 0, nextColumn = void 0, pcSize = void 0, ncSize = void 0
+                resizeLinePosX = void 0, prevCol = void 0, nextCol = void 0, pcSize = void 0, ncSize = void 0
             });
         }
 
         function makeResizeLine(e) {
-            var resizeLine = document.createElement("div");
+            let resizeLine = document.createElement("div");
             resizeLine.style.top = 0;
             resizeLine.style.right = 0;
-            resizeLine.style.width = "5px";
+            resizeLine.style.width = "3px";
             resizeLine.style.position = 'absolute';
             resizeLine.style.cursor = "col-resize";
             resizeLine.style.userSelect = "none";
             resizeLine.style.height = e + "%";
             return resizeLine;
-        }
-
-        function l(e, t) {
-            return window.getComputedStyle(e, null).getPropertyValue(t);
         }
     }
 
@@ -1309,7 +1303,7 @@
             for (let prop in obj) {
                 if (obj.hasOwnProperty(prop)) {
                     if (deep && Object.prototype.toString.call(obj[prop]) === '[object Object]') {
-                        extended[prop] = extend(extended[prop], obj[prop]);
+                        extended[prop] = _extend(extended[prop], obj[prop]);
                     } else {
                         extended[prop] = obj[prop];
                     }

@@ -11,8 +11,18 @@
     overflow: auto;
 }
 
+.hn-table-cover table{
+    table-layout: fixed;
+}
+
+.hn-table-cover > table > tbody > tr > *, .hn-table-cover > table > thead > tr > *{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 [hn-table-pagination=true] .hn-table-cover {
-    height: auto;
+    height: calc(100% - 50px);
 }
 
 .hn-table-pagination {
@@ -43,11 +53,11 @@
     padding: 0;
     margin: 0 auto;
     width: 100%;
-    table-layout: fixed;
 }
 
 .hn-table-hd {
     position: sticky;
+    position: -webkit-sticky;
     top: 0;
 }
 

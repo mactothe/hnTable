@@ -80,6 +80,16 @@
     vertical-align: middle;
 }
 
+.hn-table-head-sort {
+    top: calc(50% - 10px);
+    right: 10px;
+    width: 10px;
+    position: absolute;
+    user-select: none;
+    height: 20px;
+    cursor: pointer;
+}
+
 .hn-table-cell {
     border-left: 1px solid rgba(0, 0, 0, 0.3);
     border-right: 1px solid rgba(0, 0, 0, 0.3);

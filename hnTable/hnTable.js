@@ -29,6 +29,14 @@
         }
     };
 
+    let sortSvg = {
+        sort: '<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="sort" class="svg-inline--fa fa-sort fa-w-10" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path fill="currentColor" d="M41 288h238c21.4 0 32.1 25.9 17 41L177 448c-9.4 9.4-24.6 9.4-33.9 0L24 329c-15.1-15.1-4.4-41 17-41zm255-105L177 64c-9.4-9.4-24.6-9.4-33.9 0L24 183c-15.1 15.1-4.4 41 17 41h238c21.4 0 32.1-25.9 17-41z"></path></svg>',
+        sortUp: '<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="sort-up" class="svg-inline--fa fa-sort-up fa-w-10" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path fill="currentColor" d="M279 224H41c-21.4 0-32.1-25.9-17-41L143 64c9.4-9.4 24.6-9.4 33.9 0l119 119c15.2 15.1 4.5 41-16.9 41z"></path></svg>',
+        sortDown: '<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="sort-down" class="svg-inline--fa fa-sort-down fa-w-10" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path fill="currentColor" d="M41 288h238c21.4 0 32.1 25.9 17 41L177 448c-9.4 9.4-24.6 9.4-33.9 0L24 329c-15.1-15.1-4.4-41 17-41z"></path></svg>'
+    }
+
+    let sort = []
+
     let _instance = [];
     let _instanceNumber = 0;
 
@@ -512,6 +520,9 @@
             hnTableHead.setAttribute("hn-table-column-key", key);
             hnTableHead.innerText = markText;
             hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
+            if (columns[key].sortAble) {
+                hnTableHead.innerHTML += '<div class="hn-table-head-sort"><sapn class="hn-tbale-head-sort-svg">' + sortSvg.sort + '</sapn><span class="hn-table-sort-seq"></span></div>';
+            }
 
             if (!columns[key].childColumns && childColumnsUsed) {
                 hnTableHead.rowSpan = 2;
@@ -531,6 +542,9 @@
                     hnTableHeadChild.setAttribute("hn-table-child-column-key", key);
                     hnTableHeadChild.innerText = childColumnMarkText;
                     hnTableHeaderChildRow.insertAdjacentElement("beforeend", hnTableHeadChild);
+                    if (childColumns[key].sortAble) {
+                        hnTableHeadChild.innerHTML += '<div class="hn-table-head-sort"><sapn class="hn-tbale-head-sort-svg">' + sortSvg.sort + '</sapn><span class="hn-table-sort-seq"></span></div>';
+                    }
 
                     let hnTableCgCol = document.createElement("col");
                     hnTableCgCol.classList.add("hn-table-child-head-col");
@@ -639,6 +653,10 @@
             }
         } else {
             tBodySet(true);
+        }
+
+        if (_config.sortUse) {
+            _sortData(_config);
         }
     }
 
@@ -922,6 +940,113 @@
         })
     }
 
+    let _sortData = function (config) {
+        let _config = config;
+        _config.originData = _config.data;
+        let _target = _config.target;
+        if (_target.querySelector(".hn-table-head-sort") != null) {
+            _target.querySelectorAll(".hn-table-head-sort").forEach(function (el) {
+                el.addEventListener("click", function (e) {
+                    let head = el.parentElement;
+                    let key = "";
+                    if (head.getAttribute("hn-table-parent-column-key")) {
+                        key += head.getAttribute("hn-table-parent-column-key") + "." + head.getAttribute("hn-table-child-column-key");
+                    } else {
+                        key += head.getAttribute("hn-table-column-key");
+                    }
+                    let sortObj = sort.find(function (obj) {
+                        return obj.key == key;
+                    });
+                    if (sortObj != null) {
+                        if (sortObj.order == "desc") {
+                            let sortObjIdx = sort.indexOf(sortObj);
+                            sort.splice(sortObjIdx, 1);
+                        } else {
+                            sortObj.order = "desc";
+                        }
+                    } else {
+                        sort.push({
+                            key: key,
+                            order: "asc"
+                        });
+                    }
+
+                    _target.querySelectorAll(".hn-table-head-sort").forEach(function (fel) {
+                        let head = fel.parentElement;
+                        if (head) {
+                            let key = "";
+                            if (head.getAttribute("hn-table-parent-column-key")) {
+                                key += head.getAttribute("hn-table-parent-column-key") + "." + head.getAttribute("hn-table-child-column-key");
+                            } else {
+                                key += head.getAttribute("hn-table-column-key");
+                            }
+                            let sortObj = sort.find(function (obj) {
+                                return obj.key == key;
+                            });
+                            if (sortObj == null) {
+                                fel.querySelector(".hn-tbale-head-sort-svg").innerHTML = sortSvg.sort;
+                                fel.querySelector(".hn-table-sort-seq").innerText = "";
+                            } else {
+                                if (sortObj != null && sortObj.order == "asc") {
+                                    fel.querySelector(".hn-tbale-head-sort-svg").innerHTML = sortSvg.sortUp;
+                                } else {
+                                    fel.querySelector(".hn-tbale-head-sort-svg").innerHTML = sortSvg.sortDown;
+                                }
+                                let sortIdx = sort.indexOf(sortObj) + 1;
+                                fel.querySelector(".hn-table-sort-seq").innerText = sortIdx;
+                            }
+                        }
+                    });
+                    if (sort.length > 0) {
+
+                        let readySort;
+                        sort.forEach(function (sortObj, idx) {
+                            if (idx == 0) {
+                                readySort = firstBy(function (objA, objB) {
+                                    let sortKey = sortObj.key.split(".");
+                                    if (sortKey.length > 1) {
+                                        if (sortObj.order == "asc") {
+                                            return objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? 1 : 0;
+                                        } else {
+                                            return objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? 1 : 0;
+                                        }
+                                    } else {
+                                        if (sortObj.order == "asc") {
+                                            return objA[sortKey[0]] < objB[sortKey[0]] ? -1 : objA[sortKey[0]] > objB[sortKey[0]] ? 1 : 0;
+                                        } else {
+                                            return objA[sortKey[0]] > objB[sortKey[0]] ? -1 : objA[sortKey[0]] < objB[sortKey[0]] ? 1 : 0;
+                                        }
+                                    }
+                                });
+                            } else {
+                                readySort = readySort.thenBy(function (objA, objB) {
+                                    let sortKey = sortObj.key.split(".");
+                                    if (sortKey.length > 1) {
+                                        if (sortObj.order == "asc") {
+                                            return objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? 1 : 0;
+                                        } else {
+                                            return objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? 1 : 0;
+                                        }
+                                    } else {
+                                        if (sortObj.order == "asc") {
+                                            return objA[sortKey[0]] < objB[sortKey[0]] ? -1 : objA[sortKey[0]] > objB[sortKey[0]] ? 1 : 0;
+                                        } else {
+                                            return objA[sortKey[0]] > objB[sortKey[0]] ? -1 : objA[sortKey[0]] < objB[sortKey[0]] ? 1 : 0;
+                                        }
+                                    }
+                                });
+                            }
+                        });
+
+                        _config.data.sort(readySort);
+                    }
+
+                    _movePage(_config, Number(_target.getAttribute("page")));
+                });
+            });
+        }
+    }
+
     let _setPage = function (config) {
         let _config = config;
         let _target = _config.target;
@@ -929,29 +1054,56 @@
         let columns = _config.columns;
         let hnTableRows = [];
 
-        if (_config.pageOption && _config.pageOption.type == "client") {
-            let _data = _config.data;
+        let perPage = Number(_config.pageOption.perPage ? _config.pageOption.perPage : "5");
+        let perIdx = Number(_config.pageOption.perIdx ? _config.pageOption.perIdx : "10");
+        let curPage = Number(_target.getAttribute("page"));
+        let startPage = Math.ceil(curPage / perPage) > 1 ? Math.ceil(curPage / perPage) * perPage - perPage + 1 : 1;
+        let endPage = startPage + perPage - 1;
+        let totalPage;
 
-            let perPage = Number(_config.pageOption.perPage ? _config.pageOption.perPage : "5");
-            let perIdx = Number(_config.pageOption.perIdx ? _config.pageOption.perIdx : "10");
-            let curPage = Number(_target.getAttribute("page"));
-            let totalPage = (_data.length % perIdx) == 0 ? _data.length / perIdx : Math.floor(_data.length / perIdx) + 1;
+        if (_config.pageOption) {
+            if (_config.pageOption.type == "client") {
+                let _data = _config.data;
+                totalPage = (_data.length % perIdx) == 0 ? _data.length / perIdx : Math.floor(_data.length / perIdx) + 1;
+                let endPage = startPage + perPage - 1;
+                if (endPage > totalPage) {
+                    endPage = totalPage;
+                }
 
-            let startPage = Math.ceil(curPage / perPage) > 1 ? Math.ceil(curPage / perPage) * perPage - perPage + 1 : 1;
-            let endPage = startPage + perPage - 1;
-            if (endPage > totalPage) {
-                endPage = totalPage;
-            }
+                let startIdx = (curPage - 1) * perIdx
+                let endIdx = startIdx + perIdx - 1;
+                if (endIdx > _data.length - 1) {
+                    endIdx = _data.length - 1;
+                }
 
-            let startIdx = (curPage - 1) * perIdx
-            let endIdx = startIdx + perIdx - 1;
-            if (endIdx > _data.length - 1) {
-                endIdx = _data.length - 1;
-            }
+                for (let i = startIdx; i <= endIdx; i++) {
+                    _data[i].idx = i;
+                    data.push(_data[i]);
+                }
+            } else if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
 
-            for (let i = startIdx; i <= endIdx; i++) {
-                _data[i].idx = i;
-                data.push(_data[i]);
+                let _serverOption = _config.pageOption.serverOption;
+                let _data = _config.data;
+
+                totalPage = 1;
+                let totalRow = 1;
+                let totalRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.totalRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.totalRow) : "totalRow";
+                if (_data && _data[0] && _data[0][totalRowText]) {
+                    totalRow = _data[0][totalRowText];
+                    totalPage = (totalRow % perIdx) == 0 ? totalRow / perIdx : Math.floor(totalRow / perIdx) + 1;
+                }
+
+                if (endPage > totalPage) {
+                    endPage = totalPage;
+                }
+
+                let startIdx = (curPage - 1) * perIdx
+
+                for (let i = 0; i < _data.length; i++) {
+                    _data[i].idx = startIdx;
+                    data.push(_data[i]);
+                    startIdx++;
+                }
             }
 
             _target.querySelector(".hn-table-pagination").querySelectorAll("ul").forEach(function (el) {
@@ -968,7 +1120,7 @@
                     prevBtn.classList.add("hn-table-page-prev", "page-item");
                     pageUl.insertAdjacentElement("beforeend", prevBtn);
                     prevBtn.addEventListener("click", function () {
-                        movePage(startPage - 1);
+                        _movePage(_config, startPage - 1);
                     });
                 }
 
@@ -981,7 +1133,7 @@
                 }
 
                 pageBtn.addEventListener("click", function () {
-                    movePage(i);
+                    _movePage(_config, i);
                 });
 
                 if (endPage < totalPage && i == endPage) {
@@ -990,168 +1142,32 @@
                     nextBtn.classList.add("hn-table-page-next", "page-item");
                     pageUl.insertAdjacentElement("beforeend", nextBtn);
                     nextBtn.addEventListener("click", function () {
-                        movePage(endPage + 1);
+                        _movePage(_config, endPage + 1);
                     });
-                }
-            }
-
-            let movePage = function (page) {
-                _target.setAttribute("page", page);
-                let hnTableTbBd = _target.querySelector(".hn-table-bd");
-
-                hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
-                    el.remove();
-                });
-
-                let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
-                let hnTableRows = _setPage(_config);
-                hnTableRows.forEach(function (hnTableRow) {
-                    hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
-                });
-                hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
-
-                let hnTableTbHd = _target.querySelector(".hn-table-hd");
-
-                if (!_config.colHeadFixed) {
-                    hnTableTbHd.style.position = "inherit";
-                }
-            }
-
-            _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
-        } else if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
-            let _serverOption = _config.pageOption.serverOption;
-            let totalRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.totalRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.totalRow) : "totalRow";
-            let startRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.startRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.startRow) : "startRow";
-            let endRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.endRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.endRow) : "endRow";
-            let url = "";
-            let method = _serverOption && _serverOption.method ? _serverOption.method : "get";
-            if (_serverOption && _serverOption.url) {
-                url = _serverOption.url;
-            } else {
-                throw new Error(_getErrorMsg("0009"));
-            }
-
-            let _data = _config.data;
-
-            let perPage = Number(_config.pageOption.perPage ? _config.pageOption.perPage : "5");
-            let perIdx = Number(_config.pageOption.perIdx ? _config.pageOption.perIdx : "10");
-            let curPage = Number(_target.getAttribute("page"));
-            let totalPage = 1;
-            let totalRow = 1;
-            if (_data && _data[0] && _data[0][totalRowText]) {
-                totalRow = _data[0][totalRowText];
-                totalPage = (totalRow % perIdx) == 0 ? totalRow / perIdx : Math.floor(totalRow / perIdx) + 1;
-            }
-
-            let startPage = Math.ceil(curPage / perPage) > 1 ? Math.ceil(curPage / perPage) * perPage - perPage + 1 : 1;
-            let endPage = startPage + perPage - 1;
-            if (endPage > totalPage) {
-                endPage = totalPage;
-            }
-
-            let startIdx = (curPage - 1) * perIdx
-
-            for (let i = 0; i < _data.length; i++) {
-                _data[i].idx = startIdx;
-                data.push(_data[i]);
-                startIdx++;
-
-            }
-
-            _target.querySelector(".hn-table-pagination").querySelectorAll("ul").forEach(function (el) {
-                el.remove();
-            });
-
-            let pageUl = document.createElement("ul");
-            pageUl.classList.add("pagination");
-
-            for (let i = startPage; i <= endPage; i++) {
-                if (startPage > 1 && i == startPage) {
-                    let prevBtn = document.createElement("li");
-                    prevBtn.innerHTML = "<a class='page-link'><<</a>";
-                    prevBtn.classList.add("hn-table-page-prev", "page-item");
-                    pageUl.insertAdjacentElement("beforeend", prevBtn);
-                    prevBtn.addEventListener("click", function () {
-                        movePage(startPage - 1);
-                    });
-                }
-
-                let pageBtn = document.createElement("li");
-                pageBtn.classList.add("hn-table-page-no", "page-item");
-                pageBtn.innerHTML = "<a class='page-link'>" + i + "</a>";
-                pageUl.insertAdjacentElement("beforeend", pageBtn);
-                if (curPage == i) {
-                    pageBtn.classList.add("curPage");
-                }
-
-                pageBtn.addEventListener("click", function () {
-                    movePage(i);
-                });
-
-                if (endPage < totalPage && i == endPage) {
-                    let nextBtn = document.createElement("li");
-                    nextBtn.innerHTML = "<a class='page-link'>>></a>";
-                    nextBtn.classList.add("hn-table-page-next", "page-item");
-                    pageUl.insertAdjacentElement("beforeend", nextBtn);
-                    nextBtn.addEventListener("click", function () {
-                        movePage(endPage + 1);
-                    });
-                }
-
-                let movePage = function (page) {
-
-                    let dataParam = {}
-                    dataParam[startRowText] = (page - 1) * perIdx;
-                    dataParam[endRowText] = perIdx;
-
-                    _target.setAttribute("page", page);
-
-                    if (_serverOption.data) {
-                        let optionParam = _serverOption.data();
-                        Object.keys(optionParam).forEach(function (key) {
-                            dataParam[key] = optionParam[key]
-                        });
-                    }
-
-
-                    _rest({
-                        url: url,
-                        method: method,
-                        data: dataParam,
-                        type: "json"
-                    }).then(function (result) {
-                        _config.data = result;
-                        let hnTableRows = _setPage(_config);
-                        let hnTableTbBd = _target.querySelector(".hn-table-bd");
-                        hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
-                            el.remove();
-                        });
-
-                        let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
-                        hnTableBody.classList.add("hn-table-body");
-                        hnTableRows.forEach(function (hnTableRow) {
-                            hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
-                        });
-                        hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
-                    })
                 }
             }
             _target.querySelector(".hn-table-pagination").insertAdjacentElement("beforeend", pageUl);
+        } else {
+            data = _config.data;
         }
 
+        let createCell = function (_obj, _column, _key, _parentKey) {
+            let obj = _obj;
+            let column = _column;
+            let key = _key;
+            let parentKey = _parentKey;
 
-        let createCell = function (obj, column, key, parentKey) {
             let hnTableCell = document.createElement("td");
             hnTableCell.classList.add("hn-table-cell");
             hnTableCell.setAttribute("hn-table-column", key);
             if (parentKey) {
                 hnTableCell.setAttribute("hn-table-parent-column", parentKey);
             }
-            if (obj && obj[key]) {
+            if ((obj && obj[key]) || obj[parentKey] && obj[parentKey][key]) {
                 if (column && column.format && column.format == "locale") {
-                    hnTableCell.innerText = Number(obj[key]).toLocaleString();
+                    hnTableCell.innerText = Number(parentKey ? obj[parentKey][key] : obj[key]).toLocaleString();
                 } else if (column && column.format && typeof column.format == "function") {
-                    let r = column.format(obj[key], obj);
+                    let r = column.format(parentKey ? obj[parentKey][key] : obj[key], obj);
                     if (r && typeof r != "function" && typeof r != "object") {
                         hnTableCell.innerText = r;
                     } else if (r && r instanceof Element) {
@@ -1160,14 +1176,14 @@
                         hnTableCell.innerText = "";
                     }
                 } else {
-                    hnTableCell.innerText = obj[key];
+                    hnTableCell.innerText = parentKey ? obj[parentKey][key] : obj[key];
                 }
                 if (column && column.textAlign) {
                     hnTableCell.style.textAlign = column.textAlign;
                 }
             } else if (obj) {
                 if (column && column.format && typeof column.format == "function") {
-                    let r = column.format(obj[key], obj);
+                    let r = column.format(parentKey ? obj[parentKey][key] : obj[key], obj);
                     if (r && typeof r != "function" && typeof r != "object") {
                         hnTableCell.innerText = r;
                     } else if (r && r instanceof Element) {
@@ -1176,13 +1192,13 @@
                         hnTableCell.innerText = "";
                     }
                 } else {
-                    hnTableCell.innerText = obj[key];
+                    hnTableCell.innerText = parentKey ? obj[parentKey][key] : obj[key];
                 }
             }
             if (column && column.cellEvent && _getObjType(column.cellEvent) == "map") {
                 Object.keys(column.cellEvent).forEach(function (eKey) {
                     hnTableCell.addEventListener(eKey, function (e) {
-                        let r = column["cellEvent"][eKey](e, hnTableCell, obj && obj[key] ? obj[key] : "", obj);
+                        let r = column["cellEvent"][eKey](e, hnTableCell, parentKey ? (obj[parentKey] && obj[parentKey][key] ? obj[parentKey][key] : "") : (obj && obj[key] ? obj[key] : ""), obj);
                         if (typeof r == "boolean") {
                             return r;
                         }
@@ -1191,6 +1207,7 @@
             }
             return hnTableCell;
         }
+
         data.forEach(function (obj, idx) {
             let hnTableRow = document.createElement("tr");
             hnTableRow.classList.add("hn-table-row");
@@ -1205,7 +1222,7 @@
                 if (column.childColumns) {
                     Object.keys(column.childColumns).forEach(function (childKey) {
                         let childColumn = column.childColumns[childKey];
-                        hnTableRow.insertAdjacentElement("beforeend", createCell(obj[key], childColumn, childKey, key));
+                        hnTableRow.insertAdjacentElement("beforeend", createCell(obj, childColumn, childKey, key));
                     });
                 } else {
                     hnTableRow.insertAdjacentElement("beforeend", createCell(obj, column, key));
@@ -1215,6 +1232,84 @@
         });
 
         return hnTableRows;
+    }
+
+    let _movePage = function (config, page) {
+        let _config = config;
+        let _target = _config.target;
+
+        let perIdx = Number(_config.pageOption.perIdx ? _config.pageOption.perIdx : "10");
+
+        if (_config.pageOption.type == "server") {
+            let _serverOption = _config.pageOption.serverOption;
+            let url = "";
+            let method = _serverOption && _serverOption.method ? _serverOption.method : "get";
+            if (_serverOption && _serverOption.url) {
+                url = _serverOption.url;
+            } else {
+                throw new Error(_getErrorMsg("0009"));
+            }
+            let startRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.startRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.startRow) : "startRow";
+            let endRowText = (_serverOption && _serverOption.mapping && _serverOption.mapping.endRow) ? (_serverOption && _serverOption.mapping && _serverOption.mapping.endRow) : "endRow";
+
+            let dataParam = {}
+            dataParam[startRowText] = (page - 1) * perIdx;
+            dataParam[endRowText] = perIdx;
+            if (sort.length > 0) {
+                dataParam.sortOption = JSON.stringify(sort);
+            }
+
+            _target.setAttribute("page", page);
+
+            if (_serverOption.data) {
+                let optionParam = _serverOption.data();
+                Object.keys(optionParam).forEach(function (key) {
+                    dataParam[key] = optionParam[key]
+                });
+            }
+
+
+            _rest({
+                url: url,
+                method: method,
+                data: dataParam,
+                type: "json"
+            }).then(function (result) {
+                _config.data = result;
+                let hnTableRows = _setPage(_config);
+                let hnTableTbBd = _target.querySelector(".hn-table-bd");
+                hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
+                    el.remove();
+                });
+
+                let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
+                hnTableBody.classList.add("hn-table-body");
+                hnTableRows.forEach(function (hnTableRow) {
+                    hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
+                });
+                hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+            })
+        } else {
+            _target.setAttribute("page", page);
+            let hnTableTbBd = _target.querySelector(".hn-table-bd");
+
+            hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
+                el.remove();
+            });
+
+            let hnTableBody = hnTableTbBd.querySelector(".hn-table-body");
+            let hnTableRows = _setPage(_config);
+            hnTableRows.forEach(function (hnTableRow) {
+                hnTableBody.insertAdjacentElement("beforeend", hnTableRow);
+            });
+            hnTableTbBd.insertAdjacentElement("beforeend", hnTableBody);
+
+            let hnTableTbHd = _target.querySelector(".hn-table-hd");
+
+            if (!_config.colHeadFixed) {
+                hnTableTbHd.style.position = "inherit";
+            }
+        }
     }
 
     /**
@@ -1241,6 +1336,7 @@
             let prevCol, nextCol, resizeLinePosX, pcSize, ncSize;
             resizeLine.addEventListener("mousedown", function (e) {
                 resizeLinePosX = e.pageX;
+                console.log(resizeLinePosX);
                 let prevColumn = e.target.parentElement;
                 let columnKey = prevColumn.getAttribute("hn-table-column-key");
                 let parentColumnKey = prevColumn.getAttribute("hn-table-parent-column-key");
@@ -1315,6 +1411,77 @@
         }
         return extended;
     }
+
+    /***
+     Copyright 2013 Teun Duynstee
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+     http://www.apache.org/licenses/LICENSE-2.0
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+     */
+    let firstBy = (function () {
+
+        function identity(v) {
+            return v;
+        }
+
+        function ignoreCase(v) {
+            return typeof (v) === "string" ? v.toLowerCase() : v;
+        }
+
+        function makeCompareFunction(f, opt) {
+            opt = typeof (opt) === "object" ? opt : {direction: opt};
+
+            if (typeof (f) != "function") {
+                var prop = f;
+                // make unary function
+                f = function (v1) {
+                    return !!v1[prop] ? v1[prop] : "";
+                }
+            }
+            if (f.length === 1) {
+                // f is a unary function mapping a single item to its sort score
+                var uf = f;
+                var preprocess = opt.ignoreCase ? ignoreCase : identity;
+                var cmp = opt.cmp || function (v1, v2) {
+                    return v1 < v2 ? -1 : v1 > v2 ? 1 : 0;
+                }
+                f = function (v1, v2) {
+                    return cmp(preprocess(uf(v1)), preprocess(uf(v2)));
+                }
+            }
+            const descTokens = {"-1": '', desc: ''};
+            if (opt.direction in descTokens) return function (v1, v2) {
+                return -f(v1, v2)
+            };
+            return f;
+        }
+
+        /* adds a secondary compare function to the target function (`this` context)
+           which is applied in case the first one returns 0 (equal)
+           returns a new compare function, which has a `thenBy` method as well */
+        function tb(func, opt) {
+            /* should get value false for the first call. This can be done by calling the
+            exported function, or the firstBy property on it (for es6 module compatibility)
+            */
+            var x = (typeof (this) == "function" && !this.firstBy) ? this : false;
+            var y = makeCompareFunction(func, opt);
+            var f = x ? function (a, b) {
+                    return x(a, b) || y(a, b);
+                }
+                : y;
+            f.thenBy = tb;
+            return f;
+        }
+
+        tb.firstBy = tb;
+        return tb;
+    })();
 
 
     /**

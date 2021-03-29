@@ -78,6 +78,7 @@
     background: #f3f8fe;
     color: #000;
     vertical-align: middle;
+    position: relative;
 }
 
 .hn-table-head-sort {

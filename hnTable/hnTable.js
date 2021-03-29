@@ -520,7 +520,8 @@
             hnTableHead.setAttribute("hn-table-column-key", key);
             hnTableHead.innerText = markText;
             hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
-            if (columns[key].sortAble) {
+
+            if (columns[key].sortAble && !columns[key].childColumns) {
                 hnTableHead.innerHTML += '<div class="hn-table-head-sort"><sapn class="hn-tbale-head-sort-svg">' + sortSvg.sort + '</sapn><span class="hn-table-sort-seq"></span></div>';
             }
 
@@ -942,7 +943,9 @@
 
     let _sortData = function (config) {
         let _config = config;
-        _config.originData = _config.data;
+        
+        _config.originData = _extend(_config.data, true);
+
         let _target = _config.target;
         if (_target.querySelector(".hn-table-head-sort") != null) {
             _target.querySelectorAll(".hn-table-head-sort").forEach(function (el) {
@@ -1039,6 +1042,8 @@
                         });
 
                         _config.data.sort(readySort);
+                    } else {
+                        _config.data = _extend(_config.originData, true);
                     }
 
                     _movePage(_config, Number(_target.getAttribute("page")));
@@ -1396,6 +1401,10 @@
             i++;
         }
         let merge = function (obj) {
+            if (Array.isArray(obj)) {
+                extended = [];
+            }
+
             for (let prop in obj) {
                 if (obj.hasOwnProperty(prop)) {
                     if (deep && Object.prototype.toString.call(obj[prop]) === '[object Object]') {
@@ -1406,6 +1415,7 @@
                 }
             }
         }
+
         for (; i < arguments.length; i++) {
             merge(arguments[i]);
         }

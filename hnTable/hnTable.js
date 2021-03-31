@@ -943,7 +943,7 @@
 
     let _sortData = function (config) {
         let _config = config;
-        
+
         _config.originData = _extend(_config.data, true);
 
         let _target = _config.target;
@@ -1007,23 +1007,49 @@
                             if (idx == 0) {
                                 readySort = firstBy(function (objA, objB) {
                                     let sortKey = sortObj.key.split(".");
+
+                                    let valueA = "";
+                                    let valueB = "";
+
                                     if (sortKey.length > 1) {
-                                        if (sortObj.order == "asc") {
-                                            return objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? 1 : 0;
-                                        } else {
-                                            return objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? 1 : 0;
+                                        if (!objA[sortKey[0]][sortKey[1]] && typeof _config.columns[sortKey[0]].childColumns[sortKey[1]].format == "function") {
+                                            valueA = _config.columns[sortKey[0]].childColumns[sortKey[1]].format(null, objA);
+                                        } else if (objA[sortKey[0]][sortKey[1]]){
+                                            valueA = objA[sortKey[0]][sortKey[1]];
+                                        }
+
+                                        if (!objB[sortKey[0]][sortKey[1]] && typeof _config.columns[sortKey[0]].childColumns[sortKey[1]].format == "function") {
+                                            valueB = _config.columns[sortKey[0]].childColumns[sortKey[1]].format(null, objB);
+                                        } else if (objB[sortKey[0]][sortKey[1]]){
+                                            valueB = objB[sortKey[0]][sortKey[1]];
                                         }
                                     } else {
-                                        if (sortObj.order == "asc") {
-                                            return objA[sortKey[0]] < objB[sortKey[0]] ? -1 : objA[sortKey[0]] > objB[sortKey[0]] ? 1 : 0;
-                                        } else {
-                                            return objA[sortKey[0]] > objB[sortKey[0]] ? -1 : objA[sortKey[0]] < objB[sortKey[0]] ? 1 : 0;
+                                        if (!objA[sortKey[0]] && typeof _config.columns[sortKey[0]].format == "function") {
+                                            valueA = _config.columns[sortKey[0]].format(null, objA);
+                                        } else if (objA[sortKey[0]]) {
+                                            valueA = objA[sortKey[0]];
                                         }
+
+                                        if (!objB[sortKey[0]] && typeof _config.columns[sortKey[0]].format == "function") {
+                                            valueB = _config.columns[sortKey[0]].format(null, objB);
+                                        } else if (objB[sortKey[0]]) {
+                                            valueA = objB[sortKey[0]];
+                                        }
+                                    }
+
+                                    if (sortObj.order == "asc") {
+                                        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+                                    } else {
+                                        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0;
                                     }
                                 });
                             } else {
                                 readySort = readySort.thenBy(function (objA, objB) {
                                     let sortKey = sortObj.key.split(".");
+
+                                    objA[sortKey[0]][sortKey[1]] = objA[sortKey[0]][sortKey[1]] != undefined ? objA[sortKey[0]][sortKey[1]] : "";
+                                    objB[sortKey[0]][sortKey[1]] = objB[sortKey[0]][sortKey[1]] != undefined ? objB[sortKey[0]][sortKey[1]] : "";
+
                                     if (sortKey.length > 1) {
                                         if (sortObj.order == "asc") {
                                             return objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? 1 : 0;
@@ -1181,7 +1207,11 @@
                         hnTableCell.innerText = "";
                     }
                 } else {
-                    hnTableCell.innerText = parentKey ? obj[parentKey][key] : obj[key];
+                    if (parentKey && obj[parentKey] && obj[parentKey][key]) {
+                        hnTableCell.innerText = obj[parentKey][key];
+                    } else if (obj[key]){
+                        hnTableCell.innerText = obj[key];
+                    }
                 }
                 if (column && column.textAlign) {
                     hnTableCell.style.textAlign = column.textAlign;
@@ -1197,7 +1227,11 @@
                         hnTableCell.innerText = "";
                     }
                 } else {
-                    hnTableCell.innerText = parentKey ? obj[parentKey][key] : obj[key];
+                    if (parentKey && obj[parentKey] && obj[parentKey][key]) {
+                        hnTableCell.innerText = obj[parentKey][key];
+                    } else if (obj[key]){
+                        hnTableCell.innerText = obj[key];
+                    }
                 }
             }
             if (column && column.cellEvent && _getObjType(column.cellEvent) == "map") {
@@ -1332,7 +1366,6 @@
             if (th) {
                 let resizeLine = makeResizeLine(100);
                 th.appendChild(resizeLine);
-                th.style.position = 'relative';
                 resizeControl(resizeLine);
             }
         });

@@ -520,7 +520,8 @@
             hnTableHead.setAttribute("hn-table-column-key", key);
             hnTableHead.innerText = markText;
             hnTableHeaderRow.insertAdjacentElement("beforeend", hnTableHead);
-            if (columns[key].sortAble) {
+
+            if (columns[key].sortAble && !columns[key].childColumns) {
                 hnTableHead.innerHTML += '<div class="hn-table-head-sort"><sapn class="hn-tbale-head-sort-svg">' + sortSvg.sort + '</sapn><span class="hn-table-sort-seq"></span></div>';
             }
 
@@ -610,49 +611,45 @@
             }
         }
 
-        if (data && data.length > 0) {
-            tBodySet();
-        } else if (data.length == 0 && (_config.pageOption && _config.pageOption.serverOption)) {
-            if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
-                let _serverOption = _config.pageOption.serverOption;
-                let _perPage = _config.pageOption.perPage ? _config.pageOption.perPage : 5;
-                let _perIdx = _config.pageOption.perIdx ? _config.pageOption.perIdx : 10;
-                if (data.length == 0) {
-                    let url = _serverOption.url;
-                    let method = _serverOption.method ? _serverOption.method : "get";
-                    if (!url) {
-                        throw new Error(_getErrorMsg("0009"));
-                    } else {
-                        let dataParam = {};
-                        if (_serverOption.mapping) {
-                            let page = _target.getAttribute("page");
-                            let startRowNum = _serverOption.mapping.startRow ? _serverOption.mapping.startRow : "startRow";
-                            let endRowNum = _serverOption.mapping.endRow ? _serverOption.mapping.endRow : "endRow";
-                            dataParam[startRowNum] = page == 1 ? 0 : _perIdx * page - _perIdx;
-                            dataParam[endRowNum] = _perIdx;
-                        }
-                        if (_serverOption.data) {
-                            let optionParam = _serverOption.data();
-                            Object.keys(optionParam).forEach(function (key) {
-                                dataParam[key] = optionParam[key]
-                            });
-                        }
-                        _rest({
-                            url: url,
-                            method: method,
-                            data: dataParam,
-                            type: "json"
-                        }).then(function (result) {
-                            _config.data = result;
-                            tBodySet();
+        if (_config.pageOption && ((_config.pageOption.type == "server" && _config.pageOption.serverOption) || _config.pageOption.serverOption)) {
+            let _serverOption = _config.pageOption.serverOption;
+            let _perPage = _config.pageOption.perPage ? _config.pageOption.perPage : 5;
+            let _perIdx = _config.pageOption.perIdx ? _config.pageOption.perIdx : 10;
+            if (data.length == 0) {
+                let url = _serverOption.url;
+                let method = _serverOption.method ? _serverOption.method : "get";
+                if (!url) {
+                    throw new Error(_getErrorMsg("0009"));
+                } else {
+                    let dataParam = {};
+                    if (_serverOption.mapping) {
+                        let page = _target.getAttribute("page");
+                        let startRowNum = _serverOption.mapping.startRow ? _serverOption.mapping.startRow : "startRow";
+                        let endRowNum = _serverOption.mapping.endRow ? _serverOption.mapping.endRow : "endRow";
+                        dataParam[startRowNum] = page == 1 ? 0 : _perIdx * page - _perIdx;
+                        dataParam[endRowNum] = _perIdx;
+                    }
+                    if (_serverOption.data) {
+                        let optionParam = _serverOption.data();
+                        Object.keys(optionParam).forEach(function (key) {
+                            dataParam[key] = optionParam[key]
                         });
                     }
-                } else {
-                    tBodySet();
+                    _rest({
+                        url: url,
+                        method: method,
+                        data: dataParam,
+                        type: "json"
+                    }).then(function (result) {
+                        _config.data = result;
+                        tBodySet(result.length == 0);
+                    });
                 }
+            } else {
+                tBodySet();
             }
         } else {
-            tBodySet(true);
+            tBodySet(data.length == 0);
         }
 
         if (_config.sortUse) {
@@ -942,7 +939,9 @@
 
     let _sortData = function (config) {
         let _config = config;
-        _config.originData = _config.data;
+
+        _config.originData = _extend(_config.data, true);
+
         let _target = _config.target;
         if (_target.querySelector(".hn-table-head-sort") != null) {
             _target.querySelectorAll(".hn-table-head-sort").forEach(function (el) {
@@ -1004,23 +1003,49 @@
                             if (idx == 0) {
                                 readySort = firstBy(function (objA, objB) {
                                     let sortKey = sortObj.key.split(".");
+
+                                    let valueA = "";
+                                    let valueB = "";
+
                                     if (sortKey.length > 1) {
-                                        if (sortObj.order == "asc") {
-                                            return objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? 1 : 0;
-                                        } else {
-                                            return objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? 1 : 0;
+                                        if (!objA[sortKey[0]][sortKey[1]] && typeof _config.columns[sortKey[0]].childColumns[sortKey[1]].format == "function") {
+                                            valueA = _config.columns[sortKey[0]].childColumns[sortKey[1]].format(null, objA);
+                                        } else if (objA[sortKey[0]][sortKey[1]]) {
+                                            valueA = objA[sortKey[0]][sortKey[1]];
+                                        }
+
+                                        if (!objB[sortKey[0]][sortKey[1]] && typeof _config.columns[sortKey[0]].childColumns[sortKey[1]].format == "function") {
+                                            valueB = _config.columns[sortKey[0]].childColumns[sortKey[1]].format(null, objB);
+                                        } else if (objB[sortKey[0]][sortKey[1]]) {
+                                            valueB = objB[sortKey[0]][sortKey[1]];
                                         }
                                     } else {
-                                        if (sortObj.order == "asc") {
-                                            return objA[sortKey[0]] < objB[sortKey[0]] ? -1 : objA[sortKey[0]] > objB[sortKey[0]] ? 1 : 0;
-                                        } else {
-                                            return objA[sortKey[0]] > objB[sortKey[0]] ? -1 : objA[sortKey[0]] < objB[sortKey[0]] ? 1 : 0;
+                                        if (!objA[sortKey[0]] && typeof _config.columns[sortKey[0]].format == "function") {
+                                            valueA = _config.columns[sortKey[0]].format(null, objA);
+                                        } else if (objA[sortKey[0]]) {
+                                            valueA = objA[sortKey[0]];
                                         }
+
+                                        if (!objB[sortKey[0]] && typeof _config.columns[sortKey[0]].format == "function") {
+                                            valueB = _config.columns[sortKey[0]].format(null, objB);
+                                        } else if (objB[sortKey[0]]) {
+                                            valueA = objB[sortKey[0]];
+                                        }
+                                    }
+
+                                    if (sortObj.order == "asc") {
+                                        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+                                    } else {
+                                        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0;
                                     }
                                 });
                             } else {
                                 readySort = readySort.thenBy(function (objA, objB) {
                                     let sortKey = sortObj.key.split(".");
+
+                                    objA[sortKey[0]][sortKey[1]] = objA[sortKey[0]][sortKey[1]] != undefined ? objA[sortKey[0]][sortKey[1]] : "";
+                                    objB[sortKey[0]][sortKey[1]] = objB[sortKey[0]][sortKey[1]] != undefined ? objB[sortKey[0]][sortKey[1]] : "";
+
                                     if (sortKey.length > 1) {
                                         if (sortObj.order == "asc") {
                                             return objA[sortKey[0]][sortKey[1]] < objB[sortKey[0]][sortKey[1]] ? -1 : objA[sortKey[0]][sortKey[1]] > objB[sortKey[0]][sortKey[1]] ? 1 : 0;
@@ -1039,6 +1064,8 @@
                         });
 
                         _config.data.sort(readySort);
+                    } else {
+                        _config.data = _extend(_config.originData, true);
                     }
 
                     _movePage(_config, Number(_target.getAttribute("page")));
@@ -1065,7 +1092,7 @@
             if (_config.pageOption.type == "client") {
                 let _data = _config.data;
                 totalPage = (_data.length % perIdx) == 0 ? _data.length / perIdx : Math.floor(_data.length / perIdx) + 1;
-                let endPage = startPage + perPage - 1;
+                endPage = startPage + perPage - 1;
                 if (endPage > totalPage) {
                     endPage = totalPage;
                 }
@@ -1176,7 +1203,11 @@
                         hnTableCell.innerText = "";
                     }
                 } else {
-                    hnTableCell.innerText = parentKey ? obj[parentKey][key] : obj[key];
+                    if (parentKey && obj[parentKey] && obj[parentKey][key]) {
+                        hnTableCell.innerText = obj[parentKey][key];
+                    } else if (obj[key]) {
+                        hnTableCell.innerText = obj[key];
+                    }
                 }
                 if (column && column.textAlign) {
                     hnTableCell.style.textAlign = column.textAlign;
@@ -1192,7 +1223,11 @@
                         hnTableCell.innerText = "";
                     }
                 } else {
-                    hnTableCell.innerText = parentKey ? obj[parentKey][key] : obj[key];
+                    if (parentKey && obj[parentKey] && obj[parentKey][key]) {
+                        hnTableCell.innerText = obj[parentKey][key];
+                    } else if (obj[key]) {
+                        hnTableCell.innerText = obj[key];
+                    }
                 }
             }
             if (column && column.cellEvent && _getObjType(column.cellEvent) == "map") {
@@ -1327,7 +1362,6 @@
             if (th) {
                 let resizeLine = makeResizeLine(100);
                 th.appendChild(resizeLine);
-                th.style.position = 'relative';
                 resizeControl(resizeLine);
             }
         });
@@ -1396,6 +1430,10 @@
             i++;
         }
         let merge = function (obj) {
+            if (Array.isArray(obj)) {
+                extended = [];
+            }
+
             for (let prop in obj) {
                 if (obj.hasOwnProperty(prop)) {
                     if (deep && Object.prototype.toString.call(obj[prop]) === '[object Object]') {
@@ -1406,6 +1444,7 @@
                 }
             }
         }
+
         for (; i < arguments.length; i++) {
             merge(arguments[i]);
         }

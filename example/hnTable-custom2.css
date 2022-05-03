@@ -106,11 +106,8 @@
     --unnamed-line-spacing-64: 64px;
 }
 
-body, h1, h2, h3, h4, h5, h6, input:not([type='checkbox']), textarea, select, table, th, tr, td {
+.hn-table-wrap {
     font-family: 'Noto Sans KR', sans-serif;
-}
-
-body {
     font-size: var(--unnamed-font-size-12);
 }
 

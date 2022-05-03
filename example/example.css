@@ -1,0 +1,27 @@
+@font-face {
+    font-family: 'D2Coding';
+    font-style: normal;
+    font-weight: 400;
+    src: url("font/D2Coding/D2Coding-ligature.ttf") format('truetype');
+}
+
+@font-face {
+    font-family: 'D2Coding';
+    font-style: normal;
+    font-weight: 700;
+    src: url("font/D2Coding/D2CodingBold-ligature.ttf") format('truetype');
+}
+
+* {
+    font-family: 'D2Coding', sans-serif;
+}
+
+:not(h1):not(h2):not(h3):not(h4):not(h5) {
+    font-size: 12pt;
+}
+
+td.hljs-ln-line.hljs-ln-numbers {
+    text-align: right;
+    padding-right: 10px;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}

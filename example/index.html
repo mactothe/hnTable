@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Title</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/default.min.css">
-    <link rel="stylesheet" href="../hnTable/hnTable.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/androidstudio.min.css">
+    <link rel="stylesheet" href="example.css">
+    <link rel="stylesheet" class="for-hnTable" href="../hnTable/hnTable.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.8.0/highlightjs-line-numbers.min.js"></script>
     <script src="../hnTable/hnTable.js"></script>
     <script src="sampleData.js"></script>
     <script>
+        hljs.highlightAll();
+        hljs.initLineNumbersOnLoad();
         window.onload = function (e) {
             let columns = {
                 rnum: {markText: "순번", width: "120", sortAble: true},
@@ -66,18 +70,42 @@
                 regstrKindCd: {markText: "대장종류코드", width: "120"},
                 regstrKindCdNm: {markText: "대장종류코드명", width: "120"}
             };
-            let hnTable = new HnTable({
-                target: "#test",
-                columns: columns,
-                pageOption: {
-                    type: "client",
-                    perIdx: "20",
-                    perPage: "5"
+            let example1 = new HnTable({
+                target: "#example1",
+                data: sampleData
+            });
+
+            let example2 = new HnTable({
+                target: "#example2",
+                columns: {
+                    rnum: {markText: "순번", width: 120},
+                    newPlatPlc: {markText: "도로명대지위치", width: 300},
+                    bldNm: {markText: "건물명", width: 200},
+                    bylotCnt: {markText: "외필지수", width: 120},
+                    naRoadCd: {markText: "새주소도로코드", width: 120},
+                    naBjdongCd: {markText: "새주소법정동코드", width: 120},
+                    naUgrndCd: {markText: "새주소지상지하코드", width: 120},
+                    naMainBun: {markText: "새주소본번", width: 120},
+                    naSubBun: {markText: "새주소부번", width: 120},
+                    crtnDay: {markText: "생성일자", width: 120},
+                    platPlc: {markText: "대지위치", width: 300},
+                    sigunguCd: {markText: "시군구코드", width: 120},
+                    bjdongCd: {markText: "법정동코드", width: 120},
+                    platGbCd: {markText: "대지구분코드", width: 120},
+                    bun: {markText: "번", width: 120},
+                    ji: {markText: "지", width: 120},
+                    mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+                    mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+                    regstrGbCd: {markText: "대장구분코드", width: 120},
+                    regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+                    regstrKindCd: {markText: "대장종류코드", width: 120},
+                    regstrKindCdNm: {markText: "대장종류코드명", width: 120}
                 },
                 data: sampleData
             });
-            let hnTable2 = new HnTable({
-                target: "#test2",
+
+            let example3 = new HnTable({
+                target: "#example3",
                 columns: columns,
                 pageOption: {
                     type: "client",
@@ -90,14 +118,14 @@
 
             document.querySelectorAll(".styleChangeBtn").forEach(function (el) {
                 el.addEventListener("click", function (e) {
-                    document.querySelectorAll("link[rel='stylesheet']").forEach(function (el) {
+                    document.querySelectorAll("link[rel='stylesheet'].for-hnTable").forEach(function (el) {
                         el.remove();
                     })
-                    document.querySelector("head").insertAdjacentHTML("beforeend", '<link rel="stylesheet" href="../hnTable/hnTable.css">');
+                    document.querySelector("head").insertAdjacentHTML("beforeend", '<link rel="stylesheet" class="for-hnTable" href="../hnTable/hnTable.css">');
                     if (e.target == document.querySelector("#style2")) {
-                        document.querySelector("head").insertAdjacentHTML("beforeend", '<link rel="stylesheet" href="hnTable-custom.css">');
+                        document.querySelector("head").insertAdjacentHTML("beforeend", '<link rel="stylesheet" class="for-hnTable" href="hnTable-custom.css">');
                     } else if (e.target == document.querySelector("#style3")) {
-                        document.querySelector("head").insertAdjacentHTML("beforeend", '<link rel="stylesheet" href="hnTable-custom2.css">');
+                        document.querySelector("head").insertAdjacentHTML("beforeend", '<link rel="stylesheet" class="for-hnTable" href="hnTable-custom2.css">');
                     }
                 });
             });
@@ -110,80 +138,54 @@
         <button class="styleChangeBtn" id="style2">style 2</button>
         <button class="styleChangeBtn" id="style3">style 3</button>
     </div>
-    <div id="test" style="width: 100%; height: 400px; margin-bottom: 10px;">
+
+
+    <h1>- Basic setting</h1>
+    <pre><code class="language-javascript">    let hnTable = new HnTable({
+        target: "#example1"
+        data: sampleData
+    });</code></pre>
+    <div id="example1" style="width: 100%; height: 400px; margin-bottom: 10px;">
     </div>
-    <pre>
-        <code class="language-javascript">
-            let columns = {
-                        rnum: {markText: "순번", width: "120", sortAble: true},
-                        newPlatPlc: {
-                            markText: "도로명대지위치",
-                                width: 300,
-                                cellEvent: {
-                                click: function (e, cellElement, rowObject, cellVal) {
-                                    HnTable.modal({
-                                        title: rowObject.bldNm,
-                                        content: cellVal,
-                                        buttons: {
-                                            confirm: {
-                                                event: function () {
-                                                    document.querySelector(".hn-table-modal-overlay").remove();
-                                                },
-                                                name: "확인"
-                                            }
-                                        }
-                                    });
-                                }
-                            }
-                        },
-                        bldNm: {
-                            markText: "건물명",
-                                width: 200,
-                                cellEvent: {
-                                click: function (e, cellElement, cellVal, rowObject) {
-                                    HnTable.showLoading();
-                                    setTimeout(function (){
-                                        HnTable.hideLoading();
-                                    }, 2000)
-                                }
-                            },
-                            sortAble: true
-                        },
-                        bylotCnt: {markText: "외필지수", width: "120"},
-                        naRoadCd: {markText: "새주소도로코드", width: "120"},
-                        naBjdongCd: {markText: "새주소법정동코드", width: "120"},
-                        naUgrndCd: {markText: "새주소지상지하코드", width: "120"},
-                        naMainBun: {markText: "새주소본번", width: "120"},
-                        naSubBun: {markText: "새주소부번", width: "120"},
-                        crtnDay: {markText: "생성일자", width: "120"},
-                        platPlc: {markText: "대지위치", width: 300},
-                        sigunguCd: {markText: "시군구코드", width: "120"},
-                        bjdongCd: {markText: "법정동코드", width: "120"},
-                        platGbCd: {markText: "대지구분코드", width: "120"},
-                        bun: {markText: "번", width: "120"},
-                        ji: {markText: "지", width: "120"},
-                        mgmBldrgstPk: {markText: "관리건축물대장PK", width: "120"},
-                        mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: "120"},
-                        regstrGbCd: {markText: "대장구분코드", width: "120"},
-                        regstrGbCdNm: {markText: "대장구분코드명", width: "120"},
-                        regstrKindCd: {markText: "대장종류코드", width: "120"},
-                        regstrKindCdNm: {markText: "대장종류코드명", width: "120"}
-            };
 
-            let hnTable = new HnTable({
-                target: "#test",
-                columns: columns,
-                pageOption: {
-                    type: "client",
-                    perIdx: "20",
-                    perPage: "5"
-                },
-                data: sampleData
-            });
-        </code>
-    </pre>
+    <hr style="margin-top: 30px; margin-bottom: 10px;">
 
-    <div id="test2" style="width: 100%;">
+    <h1>- Column setting(markText, width)</h1>
+    <pre><code class="language-javascript">    let hnTable = new HnTable({
+            target: "#example2",
+            columns: {
+                //If markText does not exist, it is displayed as the key of the data.
+                rnum: {markText: "순번", width: 120},
+                newPlatPlc: {markText: "도로명대지위치", width: 300},
+                bldNm: {markText: "건물명", width: 200},
+                bylotCnt: {markText: "외필지수", width: 120},
+                naRoadCd: {markText: "새주소도로코드", width: 120},
+                naBjdongCd: {markText: "새주소법정동코드", width: 120},
+                naUgrndCd: {markText: "새주소지상지하코드", width: 120},
+                naMainBun: {markText: "새주소본번", width: 120},
+                naSubBun: {markText: "새주소부번", width: 120},
+                crtnDay: {markText: "생성일자", width: 120},
+                platPlc: {markText: "대지위치", width: 300},
+                sigunguCd: {markText: "시군구코드", width: 120},
+                bjdongCd: {markText: "법정동코드", width: 120},
+                platGbCd: {markText: "대지구분코드", width: 120},
+                bun: {markText: "번", width: 120},
+                ji: {markText: "지", width: 120},
+                mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+                mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+                regstrGbCd: {markText: "대장구분코드", width: 120},
+                regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+                regstrKindCd: {markText: "대장종류코드", width: 120},
+                regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+            },
+            data: sampleData
+    });</code></pre>
+    <div id="example2" style="width: 100%; height: 400px; margin-bottom: 10px;">
+    </div>
+
+    <hr style="margin-top: 30px; margin-bottom: 10px;">
+
+    <div id="example3" style="width: 100%; height: 400px; margin-bottom: 10px;">
     </div>
 </body>
 </html>

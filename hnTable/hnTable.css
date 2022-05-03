@@ -1,5 +1,5 @@
 @charset "utf-8";
-.hn-table-wrap * {-ms-user-select: none;-moz-user-select: -moz-none;-webkit-user-select: none;-khtml-user-select: none;user-select:none;box-sizing: border-box;}
+.hn-table-wrap * {-ms-user-select: auto;-moz-user-select: -moz-auto;-webkit-user-select: auto;-khtml-user-select: auto;user-select:auto;box-sizing: border-box;}
 
 .hn-table-wrap {
     overflow: hidden;
@@ -21,17 +21,23 @@
     white-space: nowrap;
 }
 
-[hn-table-pagination=true] .hn-table-cover {
+[hn-table-paginations=true] .hn-table-cover {
     height: calc(100% - 50px);
 }
 
-.hn-table-pagination {
+.hn-table-header.col-head-fixed {
+    position: sticky;
+    top: -1px;
+    z-index: 1;
+}
+
+.hn-table-paginations {
     width: 100%;
     height: 40px;
     margin-top: 10px;
 }
 
-.hn-table-pagination ul {
+.hn-table-paginations ul {
     list-style-type: none;
     margin: auto;
     padding: 0;
@@ -39,12 +45,12 @@
     width: fit-content;
 }
 
-.hn-table-pagination li {
+.hn-table-paginations li {
     float: left;
     margin: 0 5px;
 }
 
-.hn-table-pagination li.curPage {
+.hn-table-paginations li.curPage {
     font-weight: 900;
 }
 
@@ -96,26 +102,59 @@
     border-right: 1px solid rgba(0, 0, 0, 0.3);
 }
 
-.hn-table-cell input {
+.hn-table-cell input:not([type='checkbox']) {
     width: 100%;
     height: 100%;
     text-align: center;
-    border: none;
+    border: 2px solid #000;
+    border-radius: 3px;
     padding: 0;
     margin: 0;
     font-size: inherit;
     color: inherit;
 }
 
+.hn-table-cell input[type='checkbox'] {
+    margin:-1px 0 1px 0;
+}
+
 .hn-table-empty {
     height: 40px;
-    padding: 10px;
-    line-height: 20px;
-    font-size: 12pt;
     border-bottom: 1px solid #d3d3d3;
-    text-align: center;
-    color: #888;
 }
+
+.hn-table-empty > tr > td {
+    display: table-cell;
+    width: 100%;
+    text-align: center;
+    line-height: 40px;
+}
+
+.hn-table-page-info {
+    float: left;
+    margin-left: 1rem;
+}
+
+.hn-table-page-control {
+    float: right;
+    margin-right: 1rem;
+}
+
+.hn-table-page-number-input {
+    width: 50px;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+.hn-table-page-control > .hn-table-page-prev {
+    margin-left: 0.5rem;
+    margin-right: 0.25rem;
+}
+
+.hn-table-page-control > .hn-table-page-next {
+    margin-left: 0.25rem;
+}
+
 
 .hn-table-modal-overlay * {-ms-user-select: none;-moz-user-select: -moz-none;-webkit-user-select: none;-khtml-user-select: none;user-select:none;box-sizing: border-box;}
 

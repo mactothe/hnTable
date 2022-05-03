@@ -1,0 +1,5 @@
+td.hljs-ln-line.hljs-ln-numbers {
+    text-align: right;
+    padding-right: 10px;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}

@@ -15,61 +15,6 @@
         hljs.highlightAll();
         hljs.initLineNumbersOnLoad();
         window.onload = function (e) {
-            let columns = {
-                rnum: {markText: "순번", width: "120", sortAble: true},
-                newPlatPlc: {
-                    markText: "도로명대지위치",
-                        width: 300,
-                        cellEvent: {
-                        click: function (e, cellElement, rowObject, cellVal) {
-                            HnTable.modal({
-                                title: rowObject.bldNm,
-                                content: cellVal,
-                                buttons: {
-                                    confirm: {
-                                        event: function () {
-                                            document.querySelector(".hn-table-modal-overlay").remove();
-                                        },
-                                        name: "확인"
-                                    }
-                                }
-                            });
-                        }
-                    }
-                },
-                bldNm: {
-                    markText: "건물명",
-                        width: 200,
-                        cellEvent: {
-                        click: function (e, cellElement, cellVal, rowObject) {
-                            HnTable.showLoading();
-                            setTimeout(function (){
-                                HnTable.hideLoading();
-                            }, 2000)
-                        }
-                    },
-                    sortAble: true
-                },
-                bylotCnt: {markText: "외필지수", width: "120"},
-                naRoadCd: {markText: "새주소도로코드", width: "120"},
-                naBjdongCd: {markText: "새주소법정동코드", width: "120"},
-                naUgrndCd: {markText: "새주소지상지하코드", width: "120"},
-                naMainBun: {markText: "새주소본번", width: "120"},
-                naSubBun: {markText: "새주소부번", width: "120"},
-                crtnDay: {markText: "생성일자", width: "120"},
-                platPlc: {markText: "대지위치", width: 300},
-                sigunguCd: {markText: "시군구코드", width: "120"},
-                bjdongCd: {markText: "법정동코드", width: "120"},
-                platGbCd: {markText: "대지구분코드", width: "120"},
-                bun: {markText: "번", width: "120"},
-                ji: {markText: "지", width: "120"},
-                mgmBldrgstPk: {markText: "관리건축물대장PK", width: "120"},
-                mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: "120"},
-                regstrGbCd: {markText: "대장구분코드", width: "120"},
-                regstrGbCdNm: {markText: "대장구분코드명", width: "120"},
-                regstrKindCd: {markText: "대장종류코드", width: "120"},
-                regstrKindCdNm: {markText: "대장종류코드명", width: "120"}
-            };
             let example1 = new HnTable({
                 target: "#example1",
                 data: sampleData
@@ -78,9 +23,105 @@
             let example2 = new HnTable({
                 target: "#example2",
                 columns: {
+                    check: {
+                        markText: function () {
+                            let allCheckBox = document.createElement("input");
+                            allCheckBox.setAttribute("type", "checkbox");
+                            allCheckBox.id = "allCheck";
+                            allCheckBox.addEventListener("click", function (e) {
+                                if (e.target.checked) {
+                                    document.querySelectorAll("#example2 .hn-table-row").forEach(function (el) {
+                                        if (el.getAttribute("hn-table-row-num")) {
+                                            example2.getRowData(el.getAttribute("hn-table-row-num")).check = true;
+                                            el.querySelector("[hn-table-column='check'] .rowCheck").checked = true;
+                                        }
+                                    });
+                                } else {
+                                    document.querySelectorAll("#example2 [hn-table-column='check'] .rowCheck").forEach(function (el) {
+                                        el.checked = false;
+                                    });
+                                }
+                            });
+                            return allCheckBox;
+                        }, width: 50, format: function (cellValue, rowMap) {
+                            rowMap.check = false;
+
+                            let checkboxEl = document.createElement("input");
+                            checkboxEl.type = "checkbox";
+                            checkboxEl.classList.add("rowCheck");
+
+                            let allCheck = document.querySelector("#allCheck");
+                            if (allCheck && allCheck.checked) {
+                                checkboxEl.checked = true;
+                                rowMap.check = checkboxEl.checked;
+                            }
+                            checkboxEl.addEventListener("click", function (e) {
+                                let allCheckBool = true;
+                                if (e.target.checked) {
+                                    document.querySelectorAll("#example2 [hn-table-column='check'] .rowCheck").forEach(function (el) {
+                                        if (!el.checked) {
+                                            allCheckBool = false;
+                                        }
+                                    });
+                                    rowMap.check = true;
+                                } else {
+                                    allCheckBool = false;
+                                    rowMap.check = false;
+                                }
+                                allCheck.checked = allCheckBool;
+                            });
+                            return checkboxEl;
+                        }
+                    },
                     rnum: {markText: "순번", width: 120},
                     newPlatPlc: {markText: "도로명대지위치", width: 300},
                     bldNm: {markText: "건물명", width: 200},
+                    bylotCnt: {markText: "외필지수", width: 120},
+                    naRoadCd: {markText: "새주소도로코드", width: 120},
+                    naBjdongCd: {markText: "새주소법정동코드", width: 120},
+                    naUgrndCd: {
+                        markText: "새주소지상지하코드", width: 120, format: function (cellValue, rowMap) {
+                            return cellValue == 0 ? "지상" : "지하";
+                        }
+                    },
+                    crtnDay: {markText: "생성일자", width: 120},
+                    platPlc: {markText: "대지위치", width: 300},
+                    sigunguCd: {markText: "시군구코드", width: 120},
+                    bjdongCd: {markText: "법정동코드", width: 120},
+                    platGbCd: {markText: "대지구분코드", width: 120},
+                    bunji: {
+                        markText: "번지", width: 120, format: function (cellValue, rowMap) {
+                            let bun = Number(rowMap.bun);
+                            let ji = Number(rowMap.ji)
+                            return ji != 0 ? bun + "-" + ji : bun;
+                        }
+                    },
+                    mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+                    mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+                    regstrGbCd: {markText: "대장구분코드", width: 120},
+                    regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+                    regstrKindCd: {markText: "대장종류코드", width: 120},
+                    regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+                },
+                data: sampleData
+            });
+
+            document.querySelector("#checkRowCount").addEventListener("click", function () {
+                let checkCnt = 0;
+                example2.getColumnData("check").forEach(function (value) {
+                    if (value) {
+                        ++checkCnt;
+                    }
+                });
+                alert(checkCnt);
+            });
+
+            let example3 = new HnTable({
+                target: "#example3",
+                columns: {
+                    rnum: {markText: "순번", width: 120, sortAble: true},
+                    newPlatPlc: {markText: "도로명대지위치", width: 300},
+                    bldNm: {markText: "건물명", width: 200, sortAble: true},
                     bylotCnt: {markText: "외필지수", width: 120},
                     naRoadCd: {markText: "새주소도로코드", width: 120},
                     naBjdongCd: {markText: "새주소법정동코드", width: 120},
@@ -100,17 +141,6 @@
                     regstrGbCdNm: {markText: "대장구분코드명", width: 120},
                     regstrKindCd: {markText: "대장종류코드", width: 120},
                     regstrKindCdNm: {markText: "대장종류코드명", width: 120}
-                },
-                data: sampleData
-            });
-
-            let example3 = new HnTable({
-                target: "#example3",
-                columns: columns,
-                pageOption: {
-                    type: "client",
-                    perIdx: "10",
-                    perPage: false
                 },
                 data: sampleData,
                 sortUse: true
@@ -150,37 +180,96 @@
 
     <hr style="margin-top: 30px; margin-bottom: 10px;">
 
-    <h1>- Column setting(markText, width)</h1>
-    <pre><code class="language-javascript">    let hnTable = new HnTable({
-            target: "#example2",
-            columns: {
-                //If markText does not exist, it is displayed as the key of the data.
-                rnum: {markText: "순번", width: 120},
-                newPlatPlc: {markText: "도로명대지위치", width: 300},
-                bldNm: {markText: "건물명", width: 200},
-                bylotCnt: {markText: "외필지수", width: 120},
-                naRoadCd: {markText: "새주소도로코드", width: 120},
-                naBjdongCd: {markText: "새주소법정동코드", width: 120},
-                naUgrndCd: {markText: "새주소지상지하코드", width: 120},
-                naMainBun: {markText: "새주소본번", width: 120},
-                naSubBun: {markText: "새주소부번", width: 120},
-                crtnDay: {markText: "생성일자", width: 120},
-                platPlc: {markText: "대지위치", width: 300},
-                sigunguCd: {markText: "시군구코드", width: 120},
-                bjdongCd: {markText: "법정동코드", width: 120},
-                platGbCd: {markText: "대지구분코드", width: 120},
-                bun: {markText: "번", width: 120},
-                ji: {markText: "지", width: 120},
-                mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
-                mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
-                regstrGbCd: {markText: "대장구분코드", width: 120},
-                regstrGbCdNm: {markText: "대장구분코드명", width: 120},
-                regstrKindCd: {markText: "대장종류코드", width: 120},
-                regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+    <h1>- Column setting(markText, width, format)</h1>
+    <pre><code class="language-javascript">let hnTable = new HnTable({
+        target: "#example2",
+        columns: {
+            check: {
+                markText: function () {
+                    let allCheckBox = document.createElement("input");
+                    allCheckBox.setAttribute("type", "checkbox");
+                    allCheckBox.id = "allCheck";
+                    allCheckBox.addEventListener("click", function (e) {
+                        if (e.target.checked) {
+                            document.querySelectorAll("#example2 .hn-table-row").forEach(function (el) {
+                                if (el.getAttribute("hn-table-row-num")) {
+                                    example2.getRowData(el.getAttribute("hn-table-row-num")).check = true;
+                                    el.querySelector("[hn-table-column='check'] .rowCheck").checked = true;
+                                }
+                            });
+                        } else {
+                            document.querySelectorAll("#example2 [hn-table-column='check'] .rowCheck").forEach(function (el) {
+                                el.checked = false;
+                            });
+                        }
+                    });
+                    return allCheckBox;
+                }, width: 50, format: function (cellValue, rowMap) {
+                    rowMap.check = false;
+
+                    let checkboxEl = document.createElement("input");
+                    checkboxEl.type = "checkbox";
+                    checkboxEl.classList.add("rowCheck");
+
+                    let allCheck = document.querySelector("#allCheck");
+                    if (allCheck && allCheck.checked) {
+                        checkboxEl.checked = true;
+                        rowMap.check = checkboxEl.checked;
+                    }
+                    checkboxEl.addEventListener("click", function (e) {
+                        let allCheckBool = true;
+                        if (e.target.checked) {
+                            document.querySelectorAll("#example2 [hn-table-column='check'] .rowCheck").forEach(function (el) {
+                                if (!el.checked) {
+                                    allCheckBool = false;
+                                }
+                            });
+                            rowMap.check = true;
+                        } else {
+                            allCheckBool = false;
+                            rowMap.check = false;
+                        }
+                        allCheck.checked = allCheckBool;
+                    });
+                    return checkboxEl;
+                }
             },
-            data: sampleData
+            rnum: {markText: "순번", width: 120},
+            newPlatPlc: {markText: "도로명대지위치", width: 300},
+            bldNm: {markText: "건물명", width: 200},
+            bylotCnt: {markText: "외필지수", width: 120},
+            naRoadCd: {markText: "새주소도로코드", width: 120},
+            naBjdongCd: {markText: "새주소법정동코드", width: 120},
+            naUgrndCd: {
+                markText: "새주소지상지하코드", width: 120, format: function (cellValue, rowMap) {
+                    return cellValue == 0 ? "지상" : "지하";
+                }
+            },
+            crtnDay: {markText: "생성일자", width: 120},
+            platPlc: {markText: "대지위치", width: 300},
+            sigunguCd: {markText: "시군구코드", width: 120},
+            bjdongCd: {markText: "법정동코드", width: 120},
+            platGbCd: {markText: "대지구분코드", width: 120},
+            bunji: {
+                markText: "번지", width: 120, format: function (cellValue, rowMap) {
+                    let bun = Number(rowMap.bun);
+                    let ji = Number(rowMap.ji)
+                    return ji != 0 ? bun + "-" + ji : bun;
+                }
+            },
+            mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+            mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+            regstrGbCd: {markText: "대장구분코드", width: 120},
+            regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+            regstrKindCd: {markText: "대장종류코드", width: 120},
+            regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+        },
+        data: sampleData
     });</code></pre>
     <div id="example2" style="width: 100%; height: 400px; margin-bottom: 10px;">
+    </div>
+    <div style="display: block; width: 100%; margin-bottom: 10px;">
+        <button id="checkRowCount">checkCount</button>
     </div>
 
     <hr style="margin-top: 30px; margin-bottom: 10px;">

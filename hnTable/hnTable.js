@@ -126,6 +126,7 @@
         _config.name = _config.name ? _config.name : "hnTable_" + _instanceNumber;
 
         this.config = _config;
+        this.getData = _getData;
         this.getColumnData = _getColumnData;
         this.getColumnIndex = _getColumnIndex;
         this.getRowData = _getRowData;
@@ -410,6 +411,7 @@
     let _initTable = function (options) {
         let _this = this;
         let _config = _this.config;
+        _config.data = deepCopyObject(_config.data);
         if (options) {
             Object.keys(options).forEach(function (key) {
                 if (_config[key]) {
@@ -429,7 +431,7 @@
             _target.removeAttribute("hn-table-paginations");
         }
 
-        if(_this.config && _this.config.pageOption && _this.config.pageOption.pageInit) {
+        if (_this.config && _this.config.pageOption && _this.config.pageOption.pageInit) {
             if (_target.getAttribute("hn-table-page")) {
                 _target.removeAttribute("hn-table-page");
             }
@@ -614,7 +616,7 @@
         let tBodySet = function (empty) {
             dataEmpty = empty
             if (empty) {
-                let hnTableEmpty =  document.createElement("tbody");
+                let hnTableEmpty = document.createElement("tbody");
                 hnTableEmpty.classList.add("hn-table-empty");
                 let hnTableEmptyCol = document.createElement("tr");
                 let hnTableEmptyRow = document.createElement("td");
@@ -740,7 +742,7 @@
                 hnTableCaption.style.textIndent = "-999em";
             }
             if (_config.caption.text) {
-            hnTableCaption.innerText = _config.caption.text;
+                hnTableCaption.innerText = _config.caption.text;
             }
             if (_config.caption.html) {
                 hnTableCaption.innerHTML = _config.caption.html;
@@ -832,7 +834,10 @@
                 })
             }
         });
+    }
 
+    let _getData = function () {
+        return this.config.data;
     }
 
     let _getColumnData = function () {
@@ -847,8 +852,8 @@
                 }
                 if (column) {
                     let columnData = [];
-                    this.config.data.forEach(function (datam) {
-                        columnData.push(datam[column]);
+                    this.config.data.forEach(function (data) {
+                        columnData.push(data[column]);
                     });
                     return columnData;
                 } else {
@@ -989,9 +994,10 @@
                     if (option.data instanceof FormData) {
                         let params = "";
                         let obj = {};
-                        for (let key of option.data.keys()) {
+                        option.data.keys().forEach(function (key) {
                             obj[key] = option.data.get(key);
-                        }
+                        })
+
                         Object.keys(obj).forEach(function (key, idx) {
                             if (idx != Object.keys(obj).length - 1) {
                                 params += (key + "=" + obj[key] + "&");
@@ -1004,9 +1010,11 @@
                         let params = "";
                         let obj = {};
                         option.data = new FormData(option.data);
-                        for (let key of option.data.keys()) {
+
+                        option.data.keys().forEach(function (key) {
                             obj[key] = option.data.get(key);
-                        }
+                        })
+
                         Object.keys(obj).forEach(function (key, idx) {
                             if (idx != Object.keys(obj).length - 1) {
                                 params += (key + "=" + obj[key] + "&");
@@ -1040,7 +1048,7 @@
     let _sortData = function (config) {
         let _config = config;
 
-        _config.originData = _extend(_config.data, true);
+        _config.originData = deepCopyObject(_config.data);
 
         let _target = _config.target;
         if (_target.querySelector(".hn-table-head-sort") != null) {
@@ -1110,13 +1118,13 @@
                                     if (sortKey.length > 1) {
                                         if (objA[sortKey[0]] && !objA[sortKey[0]][sortKey[1]] && typeof _config.columns[sortKey[0]].childColumns[sortKey[1]].format == "function") {
                                             valueA = _config.columns[sortKey[0]].childColumns[sortKey[1]].format(null, objA);
-                                        } else if (objA[sortKey[0]] && objA[sortKey[0]][sortKey[1]]){
+                                        } else if (objA[sortKey[0]] && objA[sortKey[0]][sortKey[1]]) {
                                             valueA = objA[sortKey[0]][sortKey[1]];
                                         }
 
                                         if (objB[sortKey[0]] && !objB[sortKey[0]][sortKey[1]] && typeof _config.columns[sortKey[0]].childColumns[sortKey[1]].format == "function") {
                                             valueB = _config.columns[sortKey[0]].childColumns[sortKey[1]].format(null, objB);
-                                        } else if (objB[sortKey[0]] && objB[sortKey[0]][sortKey[1]]){
+                                        } else if (objB[sortKey[0]] && objB[sortKey[0]][sortKey[1]]) {
                                             valueB = objB[sortKey[0]][sortKey[1]];
                                         }
                                     } else {
@@ -1149,13 +1157,13 @@
                                     if (sortKey.length > 1) {
                                         if (objA[sortKey[0]] && !objA[sortKey[0]][sortKey[1]] && typeof _config.columns[sortKey[0]].childColumns[sortKey[1]].format == "function") {
                                             valueA = _config.columns[sortKey[0]].childColumns[sortKey[1]].format(null, objA);
-                                        } else if (objA[sortKey[0]] && objA[sortKey[0]][sortKey[1]]){
+                                        } else if (objA[sortKey[0]] && objA[sortKey[0]][sortKey[1]]) {
                                             valueA = objA[sortKey[0]][sortKey[1]];
                                         }
 
                                         if (objB[sortKey[0]] && !objB[sortKey[0]][sortKey[1]] && typeof _config.columns[sortKey[0]].childColumns[sortKey[1]].format == "function") {
                                             valueB = _config.columns[sortKey[0]].childColumns[sortKey[1]].format(null, objB);
-                                        } else if (objB[sortKey[0]] && objB[sortKey[0]][sortKey[1]]){
+                                        } else if (objB[sortKey[0]] && objB[sortKey[0]][sortKey[1]]) {
                                             valueB = objB[sortKey[0]][sortKey[1]];
                                         }
                                     } else {
@@ -1183,7 +1191,7 @@
 
                         _config.data.sort(readySort);
                     } else {
-                        _config.data = _extend(_config.originData, true);
+                        _config.data = deepCopyObject(_config.originData);
                     }
 
                     _movePage(_config, Number(_target.getAttribute("hn-table-page")));
@@ -1343,7 +1351,7 @@
                 _target.querySelector(".hn-table-paginations").insertAdjacentElement("beforeend", hnTablePageControl);
 
                 let nextPage = (curPage + 1) >= totalPage ? totalPage : (curPage + 1);
-                let prevPage = 1 >= (curPage - 1)  ? 1 : (curPage - 1);
+                let prevPage = 1 >= (curPage - 1) ? 1 : (curPage - 1);
 
                 hnTablePageNext.addEventListener("keypress", function (e) {
                     if (e.key === 'Enter') {
@@ -1363,7 +1371,7 @@
                     _movePage(_config, prevPage);
                 });
                 hnTablePageNumberInput.addEventListener("keypress", function (e) {
-                   if (e.key === 'Enter') {
+                    if (e.key === 'Enter') {
                         let page = hnTablePageNumberInput.value;
                         if (page > totalPage) {
                             page = totalPage;
@@ -1371,7 +1379,7 @@
                             page = 1;
                         }
                         _movePage(_config, page);
-                   }
+                    }
                 });
             }
         } else {
@@ -1550,7 +1558,7 @@
                 data: dataParam,
                 type: "json"
             }).then(function (result) {
-                _config.data = result;
+                _config.data = deepCopyObject(result);
                 let hnTableRows = _setPage(_config);
                 let hnTableTbBd = _target.querySelector(".hn-table-bd");
                 hnTableTbBd.querySelectorAll(".hn-table-body .hn-table-row").forEach(function (el) {
@@ -1630,7 +1638,7 @@
             });
             document.addEventListener("mousemove", function (e) {
                 if (prevCol) {
-                    let d = (e.pageX - resizeLinePosX)/2;
+                    let d = (e.pageX - resizeLinePosX) / 2;
                     if (pcSize + d > 10) {
                         prevCol.width = pcSize + d;
                         if (nextCol) {
@@ -1687,6 +1695,19 @@
             merge(arguments[i]);
         }
         return extended;
+    }
+
+    function deepCopyObject(inObject) {
+        let outObject, value, key
+        if (typeof inObject !== "object" || inObject === null) {
+            return inObject
+        }
+        outObject = Array.isArray(inObject) ? [] : {}
+        for (key in inObject) {
+            value = inObject[key]
+            outObject[key] = (typeof value === "object" && value !== null) ? deepCopyObject(value) : value
+        }
+        return outObject
     }
 
     /***

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Title</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/androidstudio.min.css">
     <link rel="stylesheet" href="example.css">
     <link rel="stylesheet" class="for-hnTable" href="../hnTable/hnTable.css">
@@ -43,8 +46,8 @@
                                 }
                             });
                             return allCheckBox;
-                        }, width: 50, format: function (cellValue, rowMap) {
-                            rowMap.check = false;
+                        }, width: 50, format: function (cellValue, rowObj) {
+                            rowObj.check = false;
 
                             let checkboxEl = document.createElement("input");
                             checkboxEl.type = "checkbox";
@@ -53,7 +56,7 @@
                             let allCheck = document.querySelector("#allCheck");
                             if (allCheck && allCheck.checked) {
                                 checkboxEl.checked = true;
-                                rowMap.check = checkboxEl.checked;
+                                rowObj.check = checkboxEl.checked;
                             }
                             checkboxEl.addEventListener("click", function (e) {
                                 let allCheckBool = true;
@@ -63,10 +66,10 @@
                                             allCheckBool = false;
                                         }
                                     });
-                                    rowMap.check = true;
+                                    rowObj.check = true;
                                 } else {
                                     allCheckBool = false;
-                                    rowMap.check = false;
+                                    rowObj.check = false;
                                 }
                                 allCheck.checked = allCheckBool;
                             });
@@ -80,7 +83,7 @@
                     naRoadCd: {markText: "새주소도로코드", width: 120},
                     naBjdongCd: {markText: "새주소법정동코드", width: 120},
                     naUgrndCd: {
-                        markText: "새주소지상지하코드", width: 120, format: function (cellValue, rowMap) {
+                        markText: "새주소지상지하코드", width: 120, format: function (cellValue, rowObj) {
                             return cellValue == 0 ? "지상" : "지하";
                         }
                     },
@@ -90,9 +93,9 @@
                     bjdongCd: {markText: "법정동코드", width: 120},
                     platGbCd: {markText: "대지구분코드", width: 120},
                     bunji: {
-                        markText: "번지", width: 120, format: function (cellValue, rowMap) {
-                            let bun = Number(rowMap.bun);
-                            let ji = Number(rowMap.ji)
+                        markText: "번지", width: 120, format: function (cellValue, rowObj) {
+                            let bun = Number(rowObj.bun);
+                            let ji = Number(rowObj.ji)
                             return ji != 0 ? bun + "-" + ji : bun;
                         }
                     },
@@ -113,15 +116,151 @@
                         ++checkCnt;
                     }
                 });
-                alert(checkCnt);
             });
 
             let example3 = new HnTable({
                 target: "#example3",
+                rowEvent: {
+                    click: function (e, rowElement, obj) {
+                        alert(JSON.stringify(obj));
+                    },
+                    mouseover: function (e, rowElement, obj) {
+                        if (e.target.classList.contains("hn-table-cell")) {
+                            let tooltip = document.querySelector("#tooltip");
+                            if (!tooltip) {
+                                tooltip = document.createElement("div");
+                                tooltip.id = "tooltip";
+                                tooltip.style.height = "fit-content";
+                                tooltip.style.padding = "5px";
+                                tooltip.style.position = "absolute";
+                                tooltip.style.zIndex = "100";
+                                tooltip.style.background = "rgba(0,0,0,0.5)";
+                                tooltip.style.color = "white";
+                            }
+                            tooltip.style.left = e.pageX+"px";
+                            tooltip.style.top = e.pageY-15+"px";
+
+                            tooltip.innerText = e.target.innerText;
+
+                            document.querySelector("body").insertAdjacentElement("beforeend", tooltip);
+                        }
+                    },
+                    mouseleave: function (e, rowElement, obj) {
+                        let tooltip = document.querySelector("#tooltip");
+                        if (tooltip) {
+                            tooltip.remove();
+                        }
+                    }
+                },
                 columns: {
-                    rnum: {markText: "순번", width: 120, sortAble: true},
+                    rnum: {markText: "순번", width: 120},
                     newPlatPlc: {markText: "도로명대지위치", width: 300},
-                    bldNm: {markText: "건물명", width: 200, sortAble: true},
+                    bldNm: {markText: "건물명", width: 200},
+                    bylotCnt: {markText: "외필지수", width: 120},
+                    naRoadCd: {markText: "새주소도로코드", width: 120},
+                    naBjdongCd: {markText: "새주소법정동코드", width: 120},
+                    naUgrndCd: {markText: "새주소지상지하코드", width: 120},
+                    naMainBun: {markText: "새주소본번", width: 120},
+                    naSubBun: {markText: "새주소부번", width: 120},
+                    crtnDay: {markText: "생성일자", width: 120},
+                    platPlc: {markText: "대지위치", width: 300},
+                    sigunguCd: {markText: "시군구코드", width: 120},
+                    bjdongCd: {markText: "법정동코드", width: 120},
+                    platGbCd: {markText: "대지구분코드", width: 120},
+                    bun: {markText: "번", width: 120},
+                    ji: {markText: "지", width: 120},
+                    mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+                    mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+                    regstrGbCd: {markText: "대장구분코드", width: 120},
+                    regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+                    regstrKindCd: {markText: "대장종류코드", width: 120},
+                    regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+                },
+                data: sampleData
+            });
+
+            let example4 = new HnTable({
+                target: "#example4",
+                columns: {
+                    rnum: {markText: "순번", width: 120},
+                    newPlatPlc: {markText: "도로명대지위치", width: 300,
+                        cellEvent: {
+                            dblclick: function (e, cellElement, rowObj, cellObj) {
+                               rowObj.newPlatPlc = prompt("Modify Cell Text", cellObj);
+                               cellElement.innerText = rowObj.newPlatPlc;
+                            }
+                        }
+                    },
+                    bldNm: {markText: "건물명", width: 200,
+                        cellEvent: {
+                            dblclick: function (e, cellElement, rowObj, cellObj) {
+                                let inputEl = document.createElement("input");
+                                inputEl.type = "text";
+                                inputEl.style.width = "100%";
+                                inputEl.style.height = "100%";
+                                inputEl.value = cellObj;
+
+                                cellElement.innerHTML = "";
+                                cellElement.insertAdjacentElement("beforeend", inputEl);
+
+                                inputEl.focus();
+                                inputEl.addEventListener("focusout", function (e) {
+                                    let changeValue = inputEl.value;
+                                    inputEl.remove();
+                                    rowObj.bldNm = changeValue;
+                                    cellElement.innerText = changeValue;
+                                });
+                            },
+                            keydown: function (e, cellElement, rowObj, cellObj) {
+                                if (e.keyCode == 9) {
+                                    e.preventDefault();
+                                    let rowNum = cellElement.parentElement.getAttribute("hn-table-row-num");
+
+                                    let nextRow;
+                                    if (e.shiftKey) {
+                                        nextRow = document.querySelector("#example4 .hn-table-row[hn-table-row-num='" + (Number(rowNum) - 1) + "']");
+                                    } else {
+                                        nextRow = document.querySelector("#example4 .hn-table-row[hn-table-row-num='" + (Number(rowNum) + 1) + "']");
+                                    }
+
+                                    if (nextRow) {
+                                        let clickEvent = document.createEvent('MouseEvents');
+                                        clickEvent.initEvent('dblclick', true, true);
+                                        nextRow.querySelector(".hn-table-cell[hn-table-column='bldNm']").dispatchEvent(clickEvent);
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    bylotCnt: {markText: "외필지수", width: 120},
+                    naRoadCd: {markText: "새주소도로코드", width: 120},
+                    naBjdongCd: {markText: "새주소법정동코드", width: 120},
+                    naUgrndCd: {markText: "새주소지상지하코드", width: 120},
+                    naMainBun: {markText: "새주소본번", width: 120},
+                    naSubBun: {markText: "새주소부번", width: 120},
+                    crtnDay: {markText: "생성일자", width: 120},
+                    platPlc: {markText: "대지위치", width: 300},
+                    sigunguCd: {markText: "시군구코드", width: 120},
+                    bjdongCd: {markText: "법정동코드", width: 120},
+                    platGbCd: {markText: "대지구분코드", width: 120},
+                    bun: {markText: "번", width: 120},
+                    ji: {markText: "지", width: 120},
+                    mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+                    mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+                    regstrGbCd: {markText: "대장구분코드", width: 120},
+                    regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+                    regstrKindCd: {markText: "대장종류코드", width: 120},
+                    regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+                },
+                data: sampleData
+            });
+
+            let example5 = new HnTable({
+                target: "#example5",
+                columns: {
+                    rnum: {markText: "순번", width: 120},
+                    newPlatPlc: {markText: "도로명대지위치", width: 300},
+                    bldNm: {markText: "건물명", width: 200},
                     bylotCnt: {markText: "외필지수", width: 120},
                     naRoadCd: {markText: "새주소도로코드", width: 120},
                     naBjdongCd: {markText: "새주소법정동코드", width: 120},
@@ -143,7 +282,11 @@
                     regstrKindCdNm: {markText: "대장종류코드명", width: 120}
                 },
                 data: sampleData,
-                sortUse: true
+                pageOption: {
+                    type: "client",
+                    perPage: "5",
+                    perIdx: "10"
+                }
             });
 
             document.querySelectorAll(".styleChangeBtn").forEach(function (el) {
@@ -163,25 +306,25 @@
     </script>
 </head>
 <body>
-    <div style="display: block; width: 100%; margin-bottom: 10px;">
-        <button class="styleChangeBtn" id="style1">style 1</button>
-        <button class="styleChangeBtn" id="style2">style 2</button>
-        <button class="styleChangeBtn" id="style3">style 3</button>
-    </div>
+<div style="display: block; width: 100%; margin-bottom: 10px;">
+    <button class="styleChangeBtn" id="style1">style 1</button>
+    <button class="styleChangeBtn" id="style2">style 2</button>
+    <button class="styleChangeBtn" id="style3">style 3</button>
+</div>
 
 
-    <h1>- Basic setting</h1>
-    <pre><code class="language-javascript">    let hnTable = new HnTable({
+<h3>- Basic setting</h3>
+<pre><code class="language-javascript">    let hnTable = new HnTable({
         target: "#example1"
         data: sampleData
     });</code></pre>
-    <div id="example1" style="width: 100%; height: 400px; margin-bottom: 10px;">
-    </div>
+<div id="example1" style="width: 100%; height: 400px; margin-bottom: 10px;">
+</div>
 
-    <hr style="margin-top: 30px; margin-bottom: 10px;">
+<hr style="margin-top: 30px; margin-bottom: 10px;">
 
-    <h1>- Column setting(markText, width, format)</h1>
-    <pre><code class="language-javascript">let hnTable = new HnTable({
+<h3>- Column setting(markText, width, format)</h3>
+<pre><code class="language-javascript">    let hnTable = new HnTable({
         target: "#example2",
         columns: {
             check: {
@@ -204,8 +347,8 @@
                         }
                     });
                     return allCheckBox;
-                }, width: 50, format: function (cellValue, rowMap) {
-                    rowMap.check = false;
+                }, width: 50, format: function (cellValue, rowObj) {
+                    rowObj.check = false;
 
                     let checkboxEl = document.createElement("input");
                     checkboxEl.type = "checkbox";
@@ -214,7 +357,7 @@
                     let allCheck = document.querySelector("#allCheck");
                     if (allCheck && allCheck.checked) {
                         checkboxEl.checked = true;
-                        rowMap.check = checkboxEl.checked;
+                        rowObj.check = checkboxEl.checked;
                     }
                     checkboxEl.addEventListener("click", function (e) {
                         let allCheckBool = true;
@@ -224,10 +367,10 @@
                                     allCheckBool = false;
                                 }
                             });
-                            rowMap.check = true;
+                            rowObj.check = true;
                         } else {
                             allCheckBool = false;
-                            rowMap.check = false;
+                            rowObj.check = false;
                         }
                         allCheck.checked = allCheckBool;
                     });
@@ -241,7 +384,7 @@
             naRoadCd: {markText: "새주소도로코드", width: 120},
             naBjdongCd: {markText: "새주소법정동코드", width: 120},
             naUgrndCd: {
-                markText: "새주소지상지하코드", width: 120, format: function (cellValue, rowMap) {
+                markText: "새주소지상지하코드", width: 120, format: function (cellValue, rowObj) {
                     return cellValue == 0 ? "지상" : "지하";
                 }
             },
@@ -251,9 +394,9 @@
             bjdongCd: {markText: "법정동코드", width: 120},
             platGbCd: {markText: "대지구분코드", width: 120},
             bunji: {
-                markText: "번지", width: 120, format: function (cellValue, rowMap) {
-                    let bun = Number(rowMap.bun);
-                    let ji = Number(rowMap.ji)
+                markText: "번지", width: 120, format: function (cellValue, rowObj) {
+                    let bun = Number(rowObj.bun);
+                    let ji = Number(rowObj.ji)
                     return ji != 0 ? bun + "-" + ji : bun;
                 }
             },
@@ -266,16 +409,198 @@
         },
         data: sampleData
     });</code></pre>
-    <div id="example2" style="width: 100%; height: 400px; margin-bottom: 10px;">
-    </div>
-    <div style="display: block; width: 100%; margin-bottom: 10px;">
-        <button id="checkRowCount">checkCount</button>
-    </div>
+<div id="example2" style="width: 100%; height: 400px; margin-bottom: 10px;">
+</div>
+<div style="display: block; width: 100%; margin-bottom: 10px;">
+    <button id="checkRowCount">checkCount</button>
+</div>
 
-    <hr style="margin-top: 30px; margin-bottom: 10px;">
+<hr style="margin-top: 30px; margin-bottom: 10px;">
 
-    <div id="example3" style="width: 100%; height: 400px; margin-bottom: 10px;">
-    </div>
+<h3>- Table Event</h3>
+<h4>1. Row Evnet</h4>
+<pre><code class="language-javascript">    let hnTable = new HnTable({
+        target: "#example3",
+        rowEvent: {
+            click: function (e, rowElement, obj) {
+                alert(JSON.stringify(obj));
+            },
+            mouseover: function (e, rowElement, obj) {
+                if (e.target.classList.contains("hn-table-cell")) {
+                    let tooltip = document.querySelector("#tooltip");
+                    if (!tooltip) {
+                        tooltip = document.createElement("div");
+                        tooltip.id = "tooltip";
+                        tooltip.style.height = "fit-content";
+                        tooltip.style.padding = "5px";
+                        tooltip.style.position = "absolute";
+                        tooltip.style.zIndex = "100";
+                        tooltip.style.background = "rgba(0,0,0,0.5)";
+                        tooltip.style.color = "white";
+                    }
+                    tooltip.style.left = e.pageX+"px";
+                    tooltip.style.top = e.pageY-15+"px";
+
+                    tooltip.innerText = e.target.innerText;
+
+                    document.querySelector("body").insertAdjacentElement("beforeend", tooltip);
+                }
+            },
+            mouseleave: function (e, rowElement, obj) {
+                let tooltip = document.querySelector("#tooltip");
+                if (tooltip) {
+                    tooltip.remove();
+                }
+            }
+        },
+        columns: {
+            rnum: {markText: "순번", width: 120},
+            newPlatPlc: {markText: "도로명대지위치", width: 300},
+            bldNm: {markText: "건물명", width: 200},
+            bylotCnt: {markText: "외필지수", width: 120},
+            naRoadCd: {markText: "새주소도로코드", width: 120},
+            naBjdongCd: {markText: "새주소법정동코드", width: 120},
+            naUgrndCd: {markText: "새주소지상지하코드", width: 120},
+            naMainBun: {markText: "새주소본번", width: 120},
+            naSubBun: {markText: "새주소부번", width: 120},
+            crtnDay: {markText: "생성일자", width: 120},
+            platPlc: {markText: "대지위치", width: 300},
+            sigunguCd: {markText: "시군구코드", width: 120},
+            bjdongCd: {markText: "법정동코드", width: 120},
+            platGbCd: {markText: "대지구분코드", width: 120},
+            bun: {markText: "번", width: 120},
+            ji: {markText: "지", width: 120},
+            mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+            mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+            regstrGbCd: {markText: "대장구분코드", width: 120},
+            regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+            regstrKindCd: {markText: "대장종류코드", width: 120},
+            regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+        },
+        data: sampleData
+    });</code></pre>
+<div id="example3" style="width: 100%; height: 400px; margin-bottom: 10px;">
+</div>
+
+<h4>2. Cell Evnet</h4>
+<pre><code class="language-javascript">    let hnTable = new HnTable({
+        target: "#example4",
+        columns: {
+            rnum: {markText: "순번", width: 120},
+            newPlatPlc: {markText: "도로명대지위치", width: 300,
+                cellEvent: {
+                    dblclick: function (e, cellElement, rowObj, cellObj) {
+                       rowObj.newPlatPlc = prompt("Modify Cell Text", cellObj);
+                       cellElement.innerText = rowObj.newPlatPlc;
+                    }
+                }
+            },
+            bldNm: {markText: "건물명", width: 200,
+                cellEvent: {
+                    dblclick: function (e, cellElement, rowObj, cellObj) {
+                        let inputEl = document.createElement("input");
+                        inputEl.type = "text";
+                        inputEl.style.width = "100%";
+                        inputEl.style.height = "100%";
+                        inputEl.value = cellObj;
+
+                        cellElement.innerHTML = "";
+                        cellElement.insertAdjacentElement("beforeend", inputEl);
+
+                        inputEl.focus();
+                        inputEl.addEventListener("focusout", function (e) {
+                            let changeValue = inputEl.value;
+                            inputEl.remove();
+                            rowObj.bldNm = changeValue;
+                            cellElement.innerText = changeValue;
+                        });
+                    },
+                    keydown: function (e, cellElement, rowObj, cellObj) {
+                        if (e.keyCode == 9) {
+                            e.preventDefault();
+                            let rowNum = cellElement.parentElement.getAttribute("hn-table-row-num");
+
+                            let nextRow;
+                            if (e.shiftKey) {
+                                nextRow = document.querySelector("#example4 .hn-table-row[hn-table-row-num='" + (Number(rowNum) - 1) + "']");
+                            } else {
+                                nextRow = document.querySelector("#example4 .hn-table-row[hn-table-row-num='"+(Number(rowNum)+1)+"']");
+                            }
+
+                            if (nextRow) {
+                                let clickEvent = document.createEvent('MouseEvents');
+                                clickEvent.initEvent('dblclick', true, true);
+                                nextRow.querySelector(".hn-table-cell[hn-table-column='bldNm']").dispatchEvent(clickEvent);
+                            }
+                        }
+                    }
+                }
+            },
+            bylotCnt: {markText: "외필지수", width: 120},
+            naRoadCd: {markText: "새주소도로코드", width: 120},
+            naBjdongCd: {markText: "새주소법정동코드", width: 120},
+            naUgrndCd: {markText: "새주소지상지하코드", width: 120},
+            naMainBun: {markText: "새주소본번", width: 120},
+            naSubBun: {markText: "새주소부번", width: 120},
+            crtnDay: {markText: "생성일자", width: 120},
+            platPlc: {markText: "대지위치", width: 300},
+            sigunguCd: {markText: "시군구코드", width: 120},
+            bjdongCd: {markText: "법정동코드", width: 120},
+            platGbCd: {markText: "대지구분코드", width: 120},
+            bun: {markText: "번", width: 120},
+            ji: {markText: "지", width: 120},
+            mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+            mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+            regstrGbCd: {markText: "대장구분코드", width: 120},
+            regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+            regstrKindCd: {markText: "대장종류코드", width: 120},
+            regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+        },
+        data: sampleData
+    });</code></pre>
+<div id="example4" style="width: 100%; height: 400px; margin-bottom: 10px;">
+</div>
+
+<hr style="margin-top: 30px; margin-bottom: 10px;">
+
+<h3>- Pagination</h3>
+<h4>1. Loaded Data Paging</h4>
+<pre><code class="language-javascript">    let hnTable = new HnTable({
+        target: "#example5",
+        columns: {
+            rnum: {markText: "순번", width: 120},
+            newPlatPlc: {markText: "도로명대지위치", width: 300},
+            bldNm: {markText: "건물명", width: 200},
+            bylotCnt: {markText: "외필지수", width: 120},
+            naRoadCd: {markText: "새주소도로코드", width: 120},
+            naBjdongCd: {markText: "새주소법정동코드", width: 120},
+            naUgrndCd: {markText: "새주소지상지하코드", width: 120},
+            naMainBun: {markText: "새주소본번", width: 120},
+            naSubBun: {markText: "새주소부번", width: 120},
+            crtnDay: {markText: "생성일자", width: 120},
+            platPlc: {markText: "대지위치", width: 300},
+            sigunguCd: {markText: "시군구코드", width: 120},
+            bjdongCd: {markText: "법정동코드", width: 120},
+            platGbCd: {markText: "대지구분코드", width: 120},
+            bun: {markText: "번", width: 120},
+            ji: {markText: "지", width: 120},
+            mgmBldrgstPk: {markText: "관리건축물대장PK", width: 120},
+            mgmUpBldrgstPk: {markText: "관리상위건축물대장PK", width: 120},
+            regstrGbCd: {markText: "대장구분코드", width: 120},
+            regstrGbCdNm: {markText: "대장구분코드명", width: 120},
+            regstrKindCd: {markText: "대장종류코드", width: 120},
+            regstrKindCdNm: {markText: "대장종류코드명", width: 120}
+        },
+        data: sampleData,
+        pageOption: {
+            type: "client",
+            perPage: "5",
+            perIdx: "10"
+        }
+    });</code></pre>
+<div id="example5" style="width: 100%; margin-bottom: 10px;">
+</div>
+
 </body>
 </html>
 

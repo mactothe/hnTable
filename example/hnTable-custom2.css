@@ -35,7 +35,7 @@
     --gray10: #F4F4F4;
 
     /* Font/text values */
-    --unnamed-font-family-noto-sans-cjk-kr: Noto Sans KR;
+    --unnamed-font-family: Nanum Gothic Coding;
     --unnamed-font-style-normal: normal;
     --unnamed-font-weight-normal: normal;
     --unnamed-font-size-12: 12px;
@@ -71,7 +71,7 @@
 
 /* Character Styles */
 .fs-48 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-48);
@@ -80,7 +80,7 @@
     color: var(--gray100);
 }
 .fs-40 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-40);
@@ -89,7 +89,7 @@
     color: var(--gray100);
 }
 .fs-36 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-36);
@@ -98,7 +98,7 @@
     color: var(--gray100);
 }
 .fs-32 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-32);
@@ -107,7 +107,7 @@
     color: var(--gray100);
 }
 .fs-28 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-28);
@@ -116,7 +116,7 @@
     color: var(--gray100);
 }
 .fs-24 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-24);
@@ -125,7 +125,7 @@
     color: var(--gray100);
 }
 .fs-20 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-20);
@@ -134,7 +134,7 @@
     color: var(--gray100);
 }
 .fs-16 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-16);
@@ -143,7 +143,7 @@
     color: var(--gray100);
 }
 .fs-14 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-14);
@@ -152,7 +152,7 @@
     color: var(--gray100);
 }
 .fs-12 {
-    font-family: var(--unnamed-font-family-noto-sans-cjk-kr);
+    font-family: var(--unnamed-font-family);
     font-style: var(--unnamed-font-style-normal);
     font-weight: var(--unnamed-font-weight-normal);
     font-size: var(--unnamed-font-size-12);
